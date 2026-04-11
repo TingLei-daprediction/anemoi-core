@@ -11,6 +11,7 @@ from .autoencoder import GraphAutoEncoder
 from .diffusionforecaster import GraphDiffusionForecaster
 from .diffusionforecaster import GraphDiffusionTendForecaster
 from .ensforecaster import GraphEnsForecaster
+from .forecaster import GraphDeltaForecaster
 from .forecaster import GraphForecaster
 from .interpolator import GraphInterpolator
 from .interpolator import GraphMultiOutInterpolator
@@ -19,6 +20,7 @@ __all__ = [
     "GraphAutoEncoder",
     "GraphDiffusionForecaster",
     "GraphDiffusionTendForecaster",
+    "GraphDeltaForecaster",
     "GraphEnsForecaster",
     "GraphForecaster",
     "GraphInterpolator",

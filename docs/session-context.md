@@ -370,6 +370,12 @@ When you say "use `docs/session-context.md` as our project context file," I'll r
     - cleaned up the malformed scaler existence check
   - added focused unit tests in:
     `training/tests/unit/losses/test_value_range_scaler.py`
+- 2026-05-10: addressed follow-up schema review comments in
+  `training/src/anemoi/training/schemas/training.py`:
+  - `TargetValueRangeScalerSchema.normalization` now allows `"max"` and `None`
+  - default normalization is now `None` so the scaler can infer the active normalizer mode
+  - added config-time validation that
+    `len(range_weight_factors) == len(thresholds) + 1`
 - 2026-05-09: added a `base` single-input finer-graph GraphTransformer variant with `refc` in both input and output and all hydrometeor variables removed from both input and output:
   - training config:
     `training/docs/user-guide/examples/anemoi-training-rrfs-lam-neural-lam-static-forcing-202405-1h-refc-value-base-refc-input-no-hydrometeors-finer-graph-v1-single-input.yaml`

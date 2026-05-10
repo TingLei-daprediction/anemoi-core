@@ -139,10 +139,20 @@ class TargetValueRangeScalerSchema(BaseModel):
     "Multiplicative factors for the threshold bins; must have len(thresholds) + 1 entries."
     apply_to: Literal["self", "all"] | list[str] = Field(default="self", example="all")
     "Which output variables receive the multiplicative factors: the reference variable only, all outputs, or a named list."
-    normalization: Literal["mean-std", "std", "min-max", "none"] = Field(default="mean-std", example="mean-std")
-    "Normalization mode used by the variable so thresholds can be applied in raw units."
+    normalization: Literal["mean-std", "std", "min-max", "max", "none"] | None = Field(
+        default=None,
+        example="mean-std",
+    )
+    "Normalization mode used by the variable so thresholds can be applied in raw units. If omitted, infer from the active normalizer config."
     norm: Literal["unit-max", "unit-sum", "unit-mean", "l1"] | None = Field(default=None, example=None)
     "Optional normalization method for the resulting scaler tensor."
+
+    @model_validator(mode="after")
+    def validate_range_weight_factors_length(self) -> Self:
+        if len(self.range_weight_factors) != len(self.thresholds) + 1:
+            msg = "range_weight_factors must have exactly len(thresholds) + 1 entries."
+            raise ValueError(msg)
+        return self
 
 
 class TargetTendencyRangeScalerSchema(TargetValueRangeScalerSchema):

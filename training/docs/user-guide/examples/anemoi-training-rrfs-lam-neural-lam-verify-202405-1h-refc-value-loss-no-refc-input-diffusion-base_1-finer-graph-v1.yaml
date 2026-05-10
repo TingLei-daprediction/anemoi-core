@@ -1,18 +1,17 @@
 defaults:
-  - anemoi-training-rrfs-lam-neural-lam-static-forcing-202405-1h-refc-value-loss-no-refc-input-diffusion-finer-graph-v1
+  - anemoi-training-rrfs-lam-neural-lam-verify-202405-1h-refc-value-loss-no-refc-input-diffusion-finer-graph-v1
   - _self_
 
-# Base_1 diffusion experiment for the RRFS 1-hour no-refc-input setup using
-# the finer_graph_v1 graph. This keeps the same diffusion architecture, role
-# split, and refc weighting logic, but uses the base_1 forcing/static
-# normalization:
+config_validation: True
+
+# Verification variant for checkpoints trained with:
+#   anemoi-training-rrfs-lam-neural-lam-static-forcing-202405-1h-refc-value-loss-no-refc-input-diffusion-base_1-finer-graph-v1
+#
+# This preserves the no-refc-input role split and finer_graph_v1 graph, keeps
+# the diffusion model path, and applies the base_1 forcing/static normalization:
 #   - landcover: none
 #   - orography: max
 #   - swdown: none
-
-system:
-  output:
-    root: /scratch3/NCEPDEV/fv3-cam/Ting.Lei/tlei-anemoi-training/base_1_diffusion_finer_graph_v1_no_refc_input/
 
 data:
   datasets:
@@ -29,6 +28,10 @@ data:
             none:
               - landcover
               - swdown
+
+system:
+  output:
+    root: /scratch3/NCEPDEV/fv3-cam/Ting.Lei/tlei-anemoi-training/base_1_diffusion_finer_graph_v1_no_refc_input/verify/
 
 dataloader:
   training:

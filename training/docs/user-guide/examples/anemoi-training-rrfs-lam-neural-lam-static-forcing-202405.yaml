@@ -27,10 +27,11 @@ data:
             default: "mean-std"
             std: []
             min-max: []
-            max: []
+            max:
+              - orography
             none:
               - landcover
-              - orography
+              - swdown
 
 model:
   output_mask:

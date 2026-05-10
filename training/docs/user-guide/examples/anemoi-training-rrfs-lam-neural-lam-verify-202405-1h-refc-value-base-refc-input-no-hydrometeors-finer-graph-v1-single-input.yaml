@@ -24,10 +24,11 @@ data:
             std: []
             min-max:
               - refc
-            max: []
+            max:
+              - orography
             none:
               - landcover
-              - orography
+              - swdown
 
 system:
   output:

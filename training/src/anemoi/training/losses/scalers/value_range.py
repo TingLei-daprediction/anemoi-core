@@ -100,7 +100,18 @@ class TargetValueRangeScaler(BaseUpdatingScaler):
         if isinstance(normalizer_cfg, str):
             inferred = normalizer_cfg
         else:
-            inferred = OmegaConf.to_container(normalizer_cfg, resolve=True) if normalizer_cfg else {}
+            if not normalizer_cfg:
+                inferred = {}
+            elif OmegaConf.is_config(normalizer_cfg):
+                inferred = OmegaConf.to_container(normalizer_cfg, resolve=True)
+            elif isinstance(normalizer_cfg, dict):
+                inferred = normalizer_cfg
+            else:
+                msg = (
+                    f"Unsupported normalizer config type for {self.__class__.__name__}: "
+                    f"{type(normalizer_cfg).__name__}"
+                )
+                raise TypeError(msg)
             default_method = inferred.get("default", "none") if isinstance(inferred, dict) else "none"
             variable_method = default_method
             if isinstance(inferred, dict):

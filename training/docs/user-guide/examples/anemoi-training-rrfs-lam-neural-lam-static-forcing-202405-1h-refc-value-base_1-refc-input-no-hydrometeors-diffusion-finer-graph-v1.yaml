@@ -1,0 +1,17 @@
+defaults:
+  - anemoi-training-rrfs-lam-neural-lam-static-forcing-202405-1h-refc-value-loss-no-refc-input-diffusion-base_1-finer-graph-v1
+  - _self_
+
+# Base_1 diffusion experiment with refc in the normal prognostic/input state:
+#   - keep the diffusion architecture and base_1 normalization
+#   - remove hydrometeors from both input and output
+#   - move refc from diagnostic/output-only into the prognostic state
+
+system:
+  output:
+    root: /scratch3/NCEPDEV/fv3-cam/Ting.Lei/tlei-anemoi-training/base_1_diffusion_finer_graph_v1_refc_input_no_hydrometeors/
+
+data:
+  datasets:
+    data:
+      diagnostic: []

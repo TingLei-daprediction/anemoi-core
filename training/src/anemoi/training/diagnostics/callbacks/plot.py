@@ -1382,7 +1382,7 @@ class PlotSample(BasePlotAdditionalMetrics):
                 if not plot_parameters_dict:
                     continue
 
-                var_names = [name for _, (name, _) in plot_parameters_dict.items()]
+                var_names = [metadata[0] for _, metadata in plot_parameters_dict.items()]
                 var_label = _plot_variable_label(var_names)
 
                 if output_times[1] == "forecast":
@@ -1721,7 +1721,7 @@ class PlotSpectrum(BasePlotAdditionalMetrics):
                 if not plot_parameters_dict_spectrum:
                     continue
 
-                var_names = [name for _, (name, _) in plot_parameters_dict_spectrum.items()]
+                var_names = [metadata[0] for _, metadata in plot_parameters_dict_spectrum.items()]
                 var_label = _plot_variable_label(var_names)
 
                 if output_times[1] == "forecast":
@@ -1876,7 +1876,7 @@ class PlotHistogram(BasePlotAdditionalMetrics):
                 if not plot_parameters_dict_histogram:
                     continue
 
-                var_names = [name for _, (name, _) in plot_parameters_dict_histogram.items()]
+                var_names = [metadata[0] for _, metadata in plot_parameters_dict_histogram.items()]
                 var_label = _plot_variable_label(var_names)
 
                 if output_times[1] == "forecast":

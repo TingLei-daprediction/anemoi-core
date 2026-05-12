@@ -1,0 +1,15 @@
+defaults:
+  - anemoi-training-rrfs-lam-neural-lam-static-forcing-202405-1h-refc-value-base_1-refc-input-no-hydrometeors-finer-graph-v1-single-input
+  - _self_
+
+# Base_2 single-input finer-graph GraphTransformer experiment:
+#   - same as one-month base_1 refc-input / no-hydrometeors setup
+#   - same base_1 normalization
+#   - increase model capacity from num_channels=1024 to num_channels=2048
+
+system:
+  output:
+    root: /scratch3/NCEPDEV/fv3-cam/Ting.Lei/tlei-anemoi-training/base_2_graphtransformer_finer_graph_v1_single_input_refc_input_no_hydrometeors/
+
+model:
+  num_channels: 2048

@@ -666,7 +666,21 @@ class AnemoiTrainer(ABC):
 
         LOGGER.debug("Starting training..")
 
-        trainer.fit(**self.fit_parameters)
+        # Detect verify-only mode: no training batches + loading weights only
+        is_verify_only = (
+            self.config.dataloader.limit_batches.training == 0 and
+            self.load_weights_only
+        )
+
+        if is_verify_only:
+            LOGGER.info("Verify-only mode detected: running trainer.validate() instead of trainer.fit()")
+            trainer.validate(
+                model=self.model,
+                datamodule=self.datamodule,
+                ckpt_path=self.last_checkpoint
+            )
+        else:
+            trainer.fit(**self.fit_parameters)
 
         if self.config.diagnostics.print_memory_summary:
             LOGGER.info("memory summary: %s", torch.cuda.memory_summary(device=0))

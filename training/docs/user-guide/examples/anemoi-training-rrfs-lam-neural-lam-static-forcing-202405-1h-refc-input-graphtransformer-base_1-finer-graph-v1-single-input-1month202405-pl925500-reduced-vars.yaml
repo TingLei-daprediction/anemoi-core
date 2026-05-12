@@ -1,0 +1,24 @@
+defaults:
+  - anemoi-training-rrfs-lam-neural-lam-static-forcing-202405-1h-refc-input-graphtransformer-base_1-finer-graph-v1-single-input-day20240505-pl925500-reduced-vars
+  - _self_
+
+# One-month, single-input, finer-graph GraphTransformer experiment with:
+#   - refc included in the prognostic/input state
+#   - base_1 forcing/static normalization
+#   - reduced pl925500 variable layout
+#   - hydrometeors removed
+# This keeps the same reduced-variable setup as the one-day base_1 run, but
+# trains across the broader May 2024 window so time-window and variable-layout
+# effects can be separated cleanly.
+
+system:
+  output:
+    root: /scratch3/NCEPDEV/fv3-cam/Ting.Lei/tlei-anemoi-training/base_1_graphtransformer_finer_graph_v1_single_input_1month202405_refc_input_pl925500_reduced_vars/
+
+dataloader:
+  training:
+    datasets:
+      data:
+        start: "2024-05-02T09:00:00"
+        end: "2024-05-31T20:00:00"
+

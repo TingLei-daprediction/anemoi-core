@@ -1,0 +1,13 @@
+defaults:
+  - anemoi-training-rrfs-lam-neural-lam-static-forcing-202405-1h-refc-input-finer-graph-v1-single-input-first-week-pl925500-reduced-vars
+  - override /model: transformer_transformermapper
+  - _self_
+
+# Reduced-variable first-week/single-input/refc-input experiment, but using the
+# closest valid local Transformer path instead of the default GraphTransformer.
+# This uses the repo's transformer+transformer-mapper configuration rather than
+# the plain transformer override, which failed for this RRFS graph setup.
+
+system:
+  output:
+    root: /scratch3/NCEPDEV/fv3-cam/Ting.Lei/tlei-anemoi-training/transformer_finer_graph_v1_single_input_first_week_refc_input_pl925500_reduced_vars/

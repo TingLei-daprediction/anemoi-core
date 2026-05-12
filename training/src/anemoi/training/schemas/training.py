@@ -130,6 +130,41 @@ class GeneralVariableLossScalerSchema(BaseModel):
     "Weight of each variable."  # Check keys (variables) are read ???
 
 
+class TargetValueRangeScalerSchema(BaseModel):
+    target_: Literal["anemoi.training.losses.scalers.TargetValueRangeScaler"] = Field(..., alias="_target_")
+    variable: str = Field(example="refc")
+    "Reference variable whose target-value ranges define multiplicative factors."
+    thresholds: list[float] = Field(example=[5.0, 20.0, 40.0], min_length=1)
+    "Thresholds in raw variable units used to assign piecewise-constant weights."
+    range_weight_factors: list[float] = Field(example=[1.0, 2.0, 4.0, 8.0], min_length=2)
+    "Multiplicative factors for the threshold bins; must have len(thresholds) + 1 entries."
+    apply_to: Literal["self", "all"] | list[str] = Field(default="self", example="all")
+    "Which output variables receive the multiplicative factors: the reference variable only, all outputs, or a named list."
+    normalization: Literal["mean-std", "std", "min-max", "max", "none"] | None = Field(
+        default=None,
+        example="mean-std",
+    )
+    "Normalization mode used by the variable so thresholds can be applied in raw units. If omitted, infer from the active normalizer config."
+    norm: Literal["unit-max", "unit-sum", "unit-mean", "l1"] | None = Field(default=None, example=None)
+    "Optional normalization method for the resulting scaler tensor."
+
+    @model_validator(mode="after")
+    def validate_range_weight_factors_length(self) -> Self:
+        if len(self.range_weight_factors) != len(self.thresholds) + 1:
+            msg = "range_weight_factors must have exactly len(thresholds) + 1 entries."
+            raise ValueError(msg)
+        return self
+
+
+class TargetTendencyRangeScalerSchema(TargetValueRangeScalerSchema):
+    target_: Literal["anemoi.training.losses.scalers.TargetTendencyRangeScaler"] = Field(..., alias="_target_")
+    "Reference-variable tendency magnitude whose ranges define multiplicative factors."
+    thresholds: list[float] = Field(example=[1.0, 5.0, 10.0], min_length=1)
+    "Thresholds in raw absolute tendency units used to assign piecewise-constant factors."
+    range_weight_factors: list[float] = Field(example=[1.0, 5.0, 20.0, 50.0], min_length=2)
+    "Multiplicative factors for absolute-tendency bins; must have len(thresholds) + 1 entries."
+
+
 class VariableMaskingScalerSchema(BaseModel):
     target_: Literal["anemoi.training.losses.scalers.VariableMaskingLossScaler"] = Field(..., alias="_target_")
     variables: list[str] = Field(defaultexample=["tp"])
@@ -232,6 +267,8 @@ class ReweightedGraphNodeAttributeScalerSchema(BaseModel):
 
 ScalerSchema = (
     GeneralVariableLossScalerSchema
+    | TargetValueRangeScalerSchema
+    | TargetTendencyRangeScalerSchema
     | VariableLevelScalerSchema
     | VariableMaskingScalerSchema
     | TendencyScalerSchema

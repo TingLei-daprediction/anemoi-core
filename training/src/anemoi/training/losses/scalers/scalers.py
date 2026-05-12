@@ -23,6 +23,9 @@ LOGGER = logging.getLogger(__name__)
 def create_scalers(scalers_config: DotDict, **kwargs) -> tuple[dict[str, TENSOR_SPEC], dict[str, BaseUpdatingScaler]]:
     scalers, updating_scalars = {}, {}
     for name, config in scalers_config.items():
+        if config is None:
+            LOGGER.debug("Skipping scaler %s because config is null.", name)
+            continue
         scaler_builder: BaseScaler = instantiate(config, **kwargs)
 
         if isinstance(scaler_builder, BaseUpdatingScaler):

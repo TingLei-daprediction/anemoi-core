@@ -1,0 +1,45 @@
+# Add static/forcing fields to an existing RRFS Zarr dataset.
+# Use with:
+#   anemoi-datasets init-additions training/docs/user-guide/examples/anemoi-data-rrfs-additions.yaml
+#   anemoi-datasets load-additions training/docs/user-guide/examples/anemoi-data-rrfs-additions.yaml
+#   anemoi-datasets finalise-additions training/docs/user-guide/examples/anemoi-data-rrfs-additions.yaml
+#
+# Verify shortNames in a sample GRIB (LAND, DSWRF):
+#   wgrib2 /scratch3/NCEPDEV/fv3-cam/Ting.Lei/rrfs-valid/rrfs.v2024050500.grib2 -s | \
+#     grep -i -E ":(LAND|DSWRF):surface:anl:" | head -n 20
+
+name: rrfs-conus-3km-additions
+
+description: >
+  Add landmask (static) and downward shortwave radiation (forcing) from
+  RRFS GRIB2 to an existing Zarr dataset.
+
+dates:
+  start: "2024-05-05T00:00:00"
+  end: "2024-05-05T23:00:00"
+  frequency: 1h
+
+build:
+  variable_naming: "{param}"
+
+output: test-20km-bcmask-time.zarr
+
+input:
+  pipe:
+    - join:
+        - pipe:
+            - grib:
+                path: /scratch3/NCEPDEV/fv3-cam/Ting.Lei/rrfs-valid/rrfs.v{date:strftime(%Y%m%d%H)}.grib2
+                shortName: [sdswrf, lsm, orog]
+                typeOfLevel: surface
+                date: "{date:strftime(%Y%m%d)}"
+                time: "{date:strftime(%H)}"
+            - rename:
+                param:
+                  sdswrf: swdown
+                  lsm: landcover
+                  orog: orography
+    - regrid:
+        matrix: /scratch3/NCEPDEV/fv3-cam/Ting.Lei/regrid/rrfs-to-latlon-3km.npz
+
+# output is the existing Zarr path to update.

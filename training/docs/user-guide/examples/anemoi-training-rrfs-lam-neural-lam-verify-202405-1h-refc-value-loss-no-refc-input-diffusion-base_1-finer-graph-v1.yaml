@@ -1,0 +1,111 @@
+defaults:
+  - anemoi-training-rrfs-lam-neural-lam-verify-202405-1h-refc-value-loss-no-refc-input-diffusion-finer-graph-v1
+  - _self_
+
+config_validation: True
+
+# Verification variant for checkpoints trained with:
+#   anemoi-training-rrfs-lam-neural-lam-static-forcing-202405-1h-refc-value-loss-no-refc-input-diffusion-base_1-finer-graph-v1
+#
+# This preserves the no-refc-input role split and finer_graph_v1 graph, keeps
+# the diffusion model path, and applies the base_1 forcing/static normalization:
+#   - landcover: none
+#   - orography: max
+#   - swdown: none
+
+data:
+  datasets:
+    data:
+      processors:
+        normalizer:
+          config:
+            default: "mean-std"
+            std: []
+            min-max:
+              - refc
+            max:
+              - orography
+            none:
+              - landcover
+              - swdown
+
+system:
+  output:
+    root: /scratch3/NCEPDEV/fv3-cam/Ting.Lei/tlei-anemoi-training/base_1_diffusion_finer_graph_v1_no_refc_input/verify/
+
+dataloader:
+  training:
+    datasets:
+      data:
+        drop:
+          - boundary_mask
+          - clmr_925
+          - clmr_850
+          - clmr_500
+          - clmr_200
+          - icmr_925
+          - icmr_850
+          - icmr_500
+          - icmr_200
+          - rwmr_925
+          - rwmr_850
+          - rwmr_500
+          - rwmr_200
+          - snmr_925
+          - snmr_850
+          - snmr_500
+          - snmr_200
+          - grle_925
+          - grle_850
+          - grle_500
+          - grle_200
+  validation:
+    datasets:
+      data:
+        drop:
+          - boundary_mask
+          - clmr_925
+          - clmr_850
+          - clmr_500
+          - clmr_200
+          - icmr_925
+          - icmr_850
+          - icmr_500
+          - icmr_200
+          - rwmr_925
+          - rwmr_850
+          - rwmr_500
+          - rwmr_200
+          - snmr_925
+          - snmr_850
+          - snmr_500
+          - snmr_200
+          - grle_925
+          - grle_850
+          - grle_500
+          - grle_200
+  test:
+    datasets:
+      data:
+        drop:
+          - boundary_mask
+          - clmr_925
+          - clmr_850
+          - clmr_500
+          - clmr_200
+          - icmr_925
+          - icmr_850
+          - icmr_500
+          - icmr_200
+          - rwmr_925
+          - rwmr_850
+          - rwmr_500
+          - rwmr_200
+          - snmr_925
+          - snmr_850
+          - snmr_500
+          - snmr_200
+          - grle_925
+          - grle_850
+          - grle_500
+          - grle_200

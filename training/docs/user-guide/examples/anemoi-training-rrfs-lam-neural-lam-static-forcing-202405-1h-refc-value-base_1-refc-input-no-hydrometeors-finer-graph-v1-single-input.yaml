@@ -1,0 +1,32 @@
+defaults:
+  - anemoi-training-rrfs-lam-neural-lam-static-forcing-202405-1h-refc-value-base-refc-input-no-hydrometeors-finer-graph-v1-single-input
+  - _self_
+
+# Base_1 single-input finer-graph GraphTransformer experiment:
+#   - keep the direct +1h refc-value loss setup
+#   - keep refc in the normal prognostic/input state
+#   - remove all hydrometeor variables from both input and output
+#   - use the base_1 forcing/static normalization:
+#       landcover -> none
+#       orography -> max
+#       swdown    -> none
+
+system:
+  output:
+    root: /scratch3/NCEPDEV/fv3-cam/Ting.Lei/tlei-anemoi-training/base_1_graphtransformer_finer_graph_v1_single_input_refc_input_no_hydrometeors/
+
+data:
+  datasets:
+    data:
+      processors:
+        normalizer:
+          config:
+            default: "mean-std"
+            std: []
+            min-max:
+              - refc
+            max:
+              - orography
+            none:
+              - landcover
+              - swdown

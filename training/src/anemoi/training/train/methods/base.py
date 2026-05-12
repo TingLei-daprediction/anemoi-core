@@ -455,9 +455,14 @@ class BaseTrainingModule(pl.LightningModule, ABC):
     def on_load_checkpoint(self, checkpoint: torch.nn.Module) -> None:
         self._update_checkpoint_state_dict_for_load(checkpoint)
 
+        data_indices = checkpoint["hyper_parameters"]["data_indices"]
+        # Backward compatibility: old checkpoints stored a single IndexCollection.
+        if hasattr(data_indices, "name_to_index"):
+            data_indices = {"data": data_indices}
+
         self._ckpt_model_name_to_index = {
             dataset_name: data_indices.name_to_index
-            for dataset_name, data_indices in checkpoint["hyper_parameters"]["data_indices"].items()
+            for dataset_name, data_indices in data_indices.items()
         }
 
     def _update_scaler_for_dataset(
@@ -468,11 +473,12 @@ class BaseTrainingModule(pl.LightningModule, ABC):
         loss_obj: torch.nn.Module,
         metrics_dict: dict,
         dataset_name: str,
+        **kwargs,
     ) -> None:
         """Update a single scaler for loss and metrics objects."""
-        kwargs = {"model": self.model, "dataset_name": dataset_name}
-
-        scaler = scaler_builder.update_scaling_values(callback, **kwargs)
+        callback_kwargs = {"model": self.model, "dataset_name": dataset_name}
+        callback_kwargs.update(kwargs)
+        scaler = scaler_builder.update_scaling_values(callback, **callback_kwargs)
         if scaler is None:  # If scaler is None, no update to be applied
             return
 
@@ -500,7 +506,7 @@ class BaseTrainingModule(pl.LightningModule, ABC):
 
         return scaler_name in scaler
 
-    def update_scalers(self, callback: AvailableCallbacks) -> None:
+    def update_scalers(self, callback: AvailableCallbacks, **kwargs) -> None:
         """Update scalers, calling the defined function on them, updating if not None."""
         # Multi-dataset case: {'dataset_a': {'nan_mask_weights': scaler, ...}, 'dataset_b': {...}}
         for dataset_name, dataset_scalers in self.updating_scalars.items():
@@ -512,6 +518,7 @@ class BaseTrainingModule(pl.LightningModule, ABC):
                     self.loss[dataset_name],
                     self.metrics[dataset_name],
                     dataset_name=dataset_name,
+                    **kwargs,
                 )
 
     def set_model_comm_group(
@@ -804,7 +811,7 @@ class BaseTrainingModule(pl.LightningModule, ABC):
         batch = self._normalize_batch(batch)
 
         # Prepare scalers, e.g. init delayed scalers and update scalers
-        self._prepare_loss_scalers()
+        self._prepare_loss_scalers(batch)
 
         return batch
 
@@ -876,13 +883,13 @@ class BaseTrainingModule(pl.LightningModule, ABC):
             batch[dataset_name] = self.model.pre_processors[dataset_name](batch[dataset_name])  # normalized in-place
         return batch
 
-    def _prepare_loss_scalers(self) -> None:
+    def _prepare_loss_scalers(self, batch: dict[str, torch.Tensor]) -> None:
         """Prepare scalers for training and validation before every step."""
         # Delayed scalers need to be initialized after the pre-processors once
         if self.is_first_step:
             self.update_scalers(callback=AvailableCallbacks.ON_TRAINING_START)
             self.is_first_step = False
-        self.update_scalers(callback=AvailableCallbacks.ON_BATCH_START)
+        self.update_scalers(callback=AvailableCallbacks.ON_BATCH_START, batch=batch)
         return
 
     @abstractmethod

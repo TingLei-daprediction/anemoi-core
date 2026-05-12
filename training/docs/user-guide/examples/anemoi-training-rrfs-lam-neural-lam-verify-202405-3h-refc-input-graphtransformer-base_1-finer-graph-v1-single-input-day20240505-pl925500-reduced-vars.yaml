@@ -1,0 +1,25 @@
+defaults:
+  - anemoi-training-rrfs-lam-neural-lam-verify-202405-1h-refc-input-graphtransformer-base_1-finer-graph-v1-single-input-day20240505-pl925500-reduced-vars
+  - _self_
+
+config_validation: True
+
+# 3-hour recursive verification variant for checkpoints trained with:
+#   anemoi-training-rrfs-lam-neural-lam-static-forcing-202405-1h-refc-input-graphtransformer-base_1-finer-graph-v1-single-input-day20240505-pl925500-reduced-vars
+#
+# This keeps the same one-day reduced-variable GraphTransformer base_1 setup,
+# but verifies the +3h forecast via recursive 1h rollouts from a direct +1h
+# checkpoint.
+
+system:
+  output:
+    root: /scratch3/NCEPDEV/fv3-cam/Ting.Lei/tlei-anemoi-training/base_1_graphtransformer_finer_graph_v1_single_input_day20240505_refc_input_pl925500_reduced_vars/verify_3h/
+
+dataloader:
+  validation_rollout: 3
+
+training:
+  rollout:
+    start: 3
+    epoch_increment: 0
+    max: 3

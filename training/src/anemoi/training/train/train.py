@@ -677,7 +677,6 @@ class AnemoiTrainer(ABC):
             trainer.validate(
                 model=self.model,
                 datamodule=self.datamodule,
-                ckpt_path=self.last_checkpoint
             )
         else:
             trainer.fit(**self.fit_parameters)

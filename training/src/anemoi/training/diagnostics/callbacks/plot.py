@@ -124,7 +124,8 @@ class BasePlotCallback(Callback, ABC):
         diagnostics: list[str] | None = None,
         force_input_reference_fields: list[str] | None = None,
         label: str | None = None,
-    ) -> dict[int, tuple[str, bool]]:
+        data_name_to_index: dict[str, int] | None = None,
+    ) -> dict[int, tuple[str, bool, int]]:
         diagnostics = [] if diagnostics is None else diagnostics
         force_input_reference_fields = [] if force_input_reference_fields is None else force_input_reference_fields
         missing = [p for p in parameters if p not in name_to_index]
@@ -136,10 +137,21 @@ class BasePlotCallback(Callback, ABC):
                 tag,
                 missing[:10],
             )
+        data_name_to_index = name_to_index if data_name_to_index is None else data_name_to_index
+        data_missing = [p for p in parameters if p in name_to_index and p not in data_name_to_index]
+        if data_missing:
+            tag = f" ({label})" if label else ""
+            LOGGER.warning(
+                "Skipping %d plot parameters not present in data outputs%s: %s",
+                len(data_missing),
+                tag,
+                data_missing[:10],
+            )
+
         return {
-            name_to_index[p]: (p, (p not in diagnostics) or (p in force_input_reference_fields))
+            name_to_index[p]: (p, (p not in diagnostics) or (p in force_input_reference_fields), data_name_to_index[p])
             for p in parameters
-            if p in name_to_index
+            if p in name_to_index and p in data_name_to_index
         }
 
     def _get_init_step(self, rollout_step: int, mode: tuple) -> int:
@@ -542,8 +554,10 @@ class LongRolloutPlots(BasePlotCallback):
             pl_module.data_indices.model.output.name_to_index[name]: (
                 name,
                 name not in self.config.data.get("diagnostic", []),
+                pl_module.data_indices.data.output.name_to_index[name],
             )
             for name in self.parameters
+            if name in pl_module.data_indices.data.output.name_to_index
         }
         if self.latlons is None:
             self.latlons = pl_module.model.model._graph_data[pl_module.model.model._graph_name_data].x.detach()
@@ -1361,6 +1375,7 @@ class PlotSample(BasePlotAdditionalMetrics):
                     diagnostics,
                     force_input_reference_fields=self.diagnostic_input_reference_fields,
                     label=dataset_name,
+                    data_name_to_index=pl_module.data_indices[dataset_name].data.output.name_to_index,
                 )
                 if not plot_parameters_dict:
                     continue

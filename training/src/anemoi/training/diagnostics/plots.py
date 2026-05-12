@@ -440,7 +440,7 @@ def plot_histogram(
 
 
 def plot_predicted_multilevel_flat_sample(
-    parameters: dict[str, int],
+    parameters: dict[str, tuple[str, bool] | tuple[str, bool, int]],
     n_plots_per_sample: int,
     latlons: np.ndarray,
     clevels: float,
@@ -463,8 +463,10 @@ def plot_predicted_multilevel_flat_sample(
 
     Parameters
     ----------
-    parameters : dict[str, int]
-        Dictionary of variable names and indices
+    parameters : dict[str, tuple[str, bool] | tuple[str, bool, int]]
+        Dictionary keyed by model-output index, with values containing
+        variable name, output-only flag, and optionally the corresponding
+        data-output index for input/target tensors.
     n_plots_per_sample : int
         Number of plots per sample
     latlons : np.ndarray
@@ -509,10 +511,16 @@ def plot_predicted_multilevel_flat_sample(
         input_time_label = time_label
     diagnostic_input_reference_fields = diagnostic_input_reference_fields or []
 
-    for plot_idx, (variable_idx, (variable_name, output_only)) in enumerate(parameters.items()):
-        xt = (x if x.ndim == 1 else x[..., variable_idx]).reshape(-1) * int(output_only)
-        yt = (y_true if y_true.ndim == 1 else y_true[..., variable_idx]).reshape(-1)
-        yp = (y_pred if y_pred.ndim == 1 else y_pred[..., variable_idx]).reshape(-1)
+    for plot_idx, (pred_variable_idx, metadata) in enumerate(parameters.items()):
+        if len(metadata) == 2:
+            variable_name, output_only = metadata
+            data_variable_idx = pred_variable_idx
+        else:
+            variable_name, output_only, data_variable_idx = metadata
+
+        xt = (x if x.ndim == 1 else x[..., data_variable_idx]).reshape(-1) * int(output_only)
+        yt = (y_true if y_true.ndim == 1 else y_true[..., data_variable_idx]).reshape(-1)
+        yp = (y_pred if y_pred.ndim == 1 else y_pred[..., pred_variable_idx]).reshape(-1)
 
         # get the colormap for the variable as defined in config file
         cmap = colormaps.default.get_cmap() if colormaps.get("default") else cm.get_cmap("viridis")

@@ -117,15 +117,28 @@ class ExportPredictions(pl.Callback):
             raise KeyError("Multiple datasets present but no 'data' dataset found in post_processors.")
         return post_processors
 
-    def _select_variables(self, pl_module: pl.LightningModule) -> tuple[list[str], list[int]]:
+    def _select_variables(self, pl_module: pl.LightningModule) -> tuple[list[str], list[int], list[int]]:
+        """Return (names, data_output_indices, model_output_indices).
+
+        data_output_indices index into the data.output space (used for input/target tensors
+        extracted via data_indices.data.output.full).
+        model_output_indices index into the model.output space (used for prediction tensors).
+        These are *different* index spaces and must not be mixed.
+        """
         data_indices = self._get_dataset_indices(pl_module)
-        name_to_index = data_indices.model.output.name_to_index
+        model_name_to_index = data_indices.model.output.name_to_index
+        data_name_to_index = data_indices.data.output.name_to_index
         if self.parameters:
-            names = [n for n in self.parameters if n in name_to_index]
+            # Keep only variables present in both spaces
+            names = [
+                n for n in self.parameters
+                if n in model_name_to_index and n in data_name_to_index
+            ]
         else:
-            names = list(name_to_index.keys())
-        indices = [name_to_index[n] for n in names]
-        return names, indices
+            names = [n for n in model_name_to_index if n in data_name_to_index]
+        data_indices_list = [data_name_to_index[n] for n in names]
+        model_indices_list = [model_name_to_index[n] for n in names]
+        return names, data_indices_list, model_indices_list
 
     def _get_latlons(self, pl_module: pl.LightningModule, n_nodes: int) -> tuple[np.ndarray, np.ndarray] | None:
         """Get per-node lat/lon from graph coordinates used by the model."""
@@ -284,12 +297,13 @@ class ExportPredictions(pl.Callback):
                     target_horizon,
                 )
 
-        var_names, var_idx = self._select_variables(pl_module)
+        var_names, data_var_idx, model_var_idx = self._select_variables(pl_module)
         data = self._ensure_3d(data.detach().cpu().numpy(), "data")
         preds = self._ensure_3d(preds.detach().cpu().numpy(), "preds")
         # Select variables after enforcing (time,node,variable) to avoid slicing the wrong axis.
-        data = data[:, :, var_idx]
-        preds = preds[:, :, var_idx]
+        # data is in data.output space; preds are in model.output space — use separate indices.
+        data = data[:, :, data_var_idx]
+        preds = preds[:, :, model_var_idx]
 
         data_len = data.shape[0]
         pred_len = preds.shape[0]

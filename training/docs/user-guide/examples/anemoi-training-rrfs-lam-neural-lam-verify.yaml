@@ -74,7 +74,7 @@ dataloader:
     validation: 4
     test: 4
   limit_batches:
-    training: 1
+    training: 0
     validation: null
     test: null
   validation_rollout: 2
@@ -155,6 +155,7 @@ diagnostics:
     frequency: ${data.frequency}
 
 training:
+  num_sanity_val_steps: 0
   multistep_input: 2
   rollout:
     start: 1
@@ -163,3 +164,5 @@ training:
   load_weights_only: True
   max_epochs: 1
   max_steps: 1
+  lr:
+    rate: 0.0

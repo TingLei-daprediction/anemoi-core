@@ -510,6 +510,7 @@ class AnemoiTrainer(ABC):
             wandb_enabled=getattr(getattr(self.config.diagnostics.log, "wandb", None), "enabled", False),
             mlflow_enabled=getattr(getattr(self.config.diagnostics.log, "mlflow", None), "enabled", False),
             weight_averaging_config=getattr(self.config.training, "weight_averaging", None),
+            config=self.config,
         )
         return get_callbacks(callbacks_context)
 

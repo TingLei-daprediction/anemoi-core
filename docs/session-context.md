@@ -258,6 +258,57 @@ When you say "use `docs/session-context.md` as our project context file," I'll r
       `d-2GPU-1hr-refc_input-gnn-finer_graph_v1-single_input-first_week-pl925500-reduced_vars-202405.sh`
     - output root:
       `/scratch3/NCEPDEV/fv3-cam/Ting.Lei/tlei-anemoi-training/gnn_finer_graph_v1_single_input_first_week_refc_input_pl925500_reduced_vars/`
+
+- **2026-05-12 branch merge context (`develop`)**:
+  - Goal: create `develop` and merge latest `upstream/main` + `feature/hres_rrfs_v0_refc_stratified_weight`.
+  - Merge sequence:
+    - `develop` created from `upstream/main`
+    - merged local `main` into `develop` (no conflicts)
+    - merged `feature/hres_rrfs_v0_refc_stratified_weight` into `develop` (10 conflicts)
+    - merge commit: `7cca17338`
+  - Conflicts resolved and why:
+
+    | File | Resolution | Rationale |
+    |---|---|---|
+    | `graphs/pyproject.toml` | kept main | upstream adds ruff ban-import rule; feature only bumped fallback_version to `0.8.999` which is not needed on develop |
+    | `models/pyproject.toml` | kept main | same as above |
+    | `training/src/anemoi/training/config/model/transformer_transformermapper.yaml` | kept feature | feature adds `_convert_: all` and `sub_graph_edge_attributes` needed for RRFS transformer experiments |
+    | `training/src/anemoi/training/data/multidataset.py` | kept feature | feature uses `float(self.rng.random())` (correct scalar); main uses `self.rng.random(1)[0]` (legacy array-index form) |
+    | `training/src/anemoi/training/diagnostics/callbacks/__init__.py` | kept main | main refactored to `CallbacksContext` dataclass + helper-based wiring; feature had an older `CONFIG_ENABLED_CALLBACKS` list pattern that is now superseded |
+    | `training/src/anemoi/training/diagnostics/callbacks/plot.py` | kept feature | feature carries the dual-index fix (separate model-output vs data-output indices) required for correct refc/diagnostic plotting |
+    | `training/src/anemoi/training/diagnostics/plots.py` | kept feature | same dual-index fix: `plot_predicted_multilevel_flat_sample` unpacks 3-tuple `(model_idx, name, output_only, data_idx)` |
+    | `training/src/anemoi/training/schemas/diagnostics.py` | kept feature | feature adds `ExportPredictionsSchema`, ensemble plot schemas, and `PlotEnsLossSchema` needed for current diagnostics config |
+    | `training/src/anemoi/training/train/methods/base.py` | manual blend | kept main's `_can_update_scaler` guard (composite-loss safety check); kept feature's `callback_kwargs` so batch and dataset context flow into updating scalers |
+    | `training/src/anemoi/training/train/train.py` | manual blend | kept main's `training_method` + PL `load_from_checkpoint` path for compatibility; added feature's `_log_checkpoint_role_debug()` call before model init |
+
+  - Known issues found during review and their resolution:
+    1. **`train.py` verify path** — `trainer.validate()` is called without `ckpt_path`
+       because the model is already loaded via `self.model` (which handles weight loading
+       internally). This works today but relies on model being a cached property with
+       weights already loaded before `trainer.validate()` runs. If PL or the model property
+       is refactored, this assumption may break silently. Recommend adding an explicit
+       assertion or log that weights were loaded before validating.
+    2. **`callbacks/__init__.py` — `ExportPredictions` was not being registered (BUG — FIXED)** —
+       The feature branch's `CONFIG_ENABLED_CALLBACKS` mechanism passed the full `config` object
+       to `ExportPredictions(config)`. Main's refactored `get_callbacks(context: CallbacksContext)`
+       dropped this mechanism, and `ExportPredictions` cannot be instantiated via the standard
+       `diagnostics.callbacks` YAML list because it requires the full config at construction.
+       Fix applied: added `config: DictConfig | None = field(default=None)` to `CallbacksContext`;
+       added `ExportPredictions(context.config)` in `get_callbacks()` when
+       `export_predictions.enabled=True`; pass `config=self.config` when building
+       `CallbacksContext` in `train.py`.
+
+  - Things confirmed correct:
+    - `methods/base.py` scaler kwargs: `callback_kwargs = {"model": self.model, "dataset_name": dataset_name}` then updated with batch kwargs — this is the right pattern for `TargetValueRangeScaler` and `NaNMaskScaler`.
+    - `update_scalers(**kwargs)` signature is now consistent with call sites at lines 900/902.
+    - `training_method` config key is present in `training/lam.yaml` (`anemoi.training.train.methods.SingleTraining`) — no broken config key.
+    - `_log_checkpoint_role_debug()` is called before model init, which is correct timing.
+
+  - Post-merge checks performed:
+    - no unresolved merge markers
+    - no remaining unmerged files
+    - Python diagnostics reported no errors in key merged files
+    - pre-merge stash restored successfully
     - this keeps the same reduced variable set, `refc` input/prognostic role,
       `multistep_input: 1`, `max_epochs: 200`, `model.num_channels: 512`,
       and `finer_graph_v1`, but switches the model family to `/model: gnn`.
@@ -374,6 +425,32 @@ When you say "use `docs/session-context.md` as our project context file," I'll r
   `training/src/anemoi/training/schemas/training.py`:
   - `TargetValueRangeScalerSchema.normalization` now allows `"max"` and `None`
   - default normalization is now `None` so the scaler can infer the active normalizer mode
+
+- **Merge replay commands (2026-05-12 reference)**:
+  - Use this when repeating the same integration flow (`upstream/main` + local `main` + feature branch into `develop`).
+  - Commands:
+    ```powershell
+    # from repo root
+    git stash push -u -m "pre-merge-develop-setup"
+    git fetch --all --prune
+
+    # start develop from latest upstream main
+    git checkout -B develop upstream/main
+
+    # merge local main and then feature branch
+    git merge --no-ff main -m "Merge local main into develop"
+    git merge --no-ff feature/hres_rrfs_v0_refc_stratified_weight -m "Merge feature/hres_rrfs_v0_refc_stratified_weight into develop"
+
+    # if conflicts: resolve, then
+    git add -A
+    git commit --no-edit
+
+    # restore local work
+    git stash pop
+    ```
+  - Notes:
+    - If `main` is intentionally divergent from `upstream/main`, keep this order to preserve both histories.
+    - After merge, run at least: `git status`, conflict-marker scan, and a quick diagnostics sanity check.
   - added config-time validation that
     `len(range_weight_factors) == len(thresholds) + 1`
 - 2026-05-09: added a `base` single-input finer-graph GraphTransformer variant with `refc` in both input and output and all hydrometeor variables removed from both input and output:

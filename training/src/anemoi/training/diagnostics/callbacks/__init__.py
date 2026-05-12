@@ -20,6 +20,7 @@ from pytorch_lightning.callbacks import Callback
 from pytorch_lightning.callbacks import TQDMProgressBar
 
 from anemoi.training.diagnostics.callbacks.checkpoint import AnemoiCheckpoint
+from anemoi.training.diagnostics.callbacks.export_predictions import ExportPredictions
 from anemoi.training.diagnostics.callbacks.optimiser import LearningRateMonitor
 from anemoi.training.diagnostics.callbacks.plot import PlottingSettings
 from anemoi.training.diagnostics.callbacks.provenance import ParentUUIDCallback
@@ -70,6 +71,7 @@ class CallbacksContext:
     wandb_enabled: bool
     mlflow_enabled: bool
     weight_averaging_config: DictConfig | None = field(default=None)
+    config: DictConfig | None = field(default=None)
 
 
 def _get_checkpoint_callback(diagnostics_cfg: DictConfig, checkpoint_paths_cfg: DictConfig) -> list[AnemoiCheckpoint]:
@@ -269,6 +271,11 @@ def get_callbacks(context: CallbacksContext) -> list[Callback]:
 
     # Get Checkpoint callback
     trainer_callbacks.extend(_get_checkpoint_callback(diagnostics_cfg, context.checkpoints_output))
+
+    # ExportPredictions — requires full config, cannot be instantiated via YAML callbacks list
+    export_cfg = getattr(diagnostics_cfg, "export_predictions", None)
+    if export_cfg is not None and getattr(export_cfg, "enabled", False) and context.config is not None:
+        trainer_callbacks.append(ExportPredictions(context.config))
 
     # User-configurable callbacks, instantiated from their YAML config.
     # These receive only what is in the config tree. Use Hydra interpolation

@@ -61,6 +61,11 @@ class BaseDiffusionTraining(BaseTrainingModule):
         )
 
         self.rho = config.model.model.diffusion.rho
+        # Diffusion validation returns a single direct prediction block [y_pred]
+        # rather than using the rollout forecaster interface. Expose a rollout-like
+        # value so existing diagnostics/export callbacks treat diffusion as a
+        # single forecast step instead of skipping plots/exports.
+        self.rollout = 1
 
     @property
     def plot_adapter(self) -> EnsemblePlotAdapterWrapper:

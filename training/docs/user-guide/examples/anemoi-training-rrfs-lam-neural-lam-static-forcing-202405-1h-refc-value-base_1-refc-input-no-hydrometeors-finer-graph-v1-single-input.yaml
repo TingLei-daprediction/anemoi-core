@@ -10,6 +10,7 @@ defaults:
 #       landcover -> none
 #       orography -> max
 #       swdown    -> none
+#       refc      -> mean-std
 
 system:
   output:
@@ -23,10 +24,15 @@ data:
           config:
             default: "mean-std"
             std: []
-            min-max:
-              - refc
             max:
               - orography
             none:
               - landcover
               - swdown
+
+training:
+  scalers:
+    datasets:
+      data:
+        refc_range_weight_factors:
+          normalization: mean-std

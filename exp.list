@@ -1,0 +1,112 @@
+Baseline
+
+1. base
+Training script:
+  d-2GPU-1hr-refc_value-base-refc_input-no_hydrometeors-finer_graph_v1-single_input-202405.sh
+Config:
+  training/docs/user-guide/examples/anemoi-training-rrfs-lam-neural-lam-static-forcing-202405-1h-refc-value-base-refc-input-no-hydrometeors-finer-graph-v1-single-input.yaml
+Goal:
+  One-month GraphTransformer baseline with refc as input/output and hydrometeors removed.
+Key setup:
+  - one-month May 2024 window
+  - GraphTransformer, finer_graph_v1, single input
+  - refc input/output
+  - hydrometeors removed
+  - base weights: refc=20, range_weight_factors=[1,2,2,4]
+  - normalization: landcover none, orography none, swdown mean-std
+  - model.num_channels=1024
+
+Derived Tests
+
+2. base_1
+Training script:
+  d-2GPU-1hr-refc_value-base_1-refc_input-no_hydrometeors-finer_graph_v1-single_input-202405.sh
+Config:
+  training/docs/user-guide/examples/anemoi-training-rrfs-lam-neural-lam-static-forcing-202405-1h-refc-value-base_1-refc-input-no-hydrometeors-finer-graph-v1-single-input.yaml
+Goal:
+  Test whether static/forcing normalization was causing the ocean artifact and poor updates.
+Differences from base:
+  - normalization changed to:
+    - landcover none
+    - orography max
+    - swdown none
+  - everything else intended to stay the same
+
+3. base_1 one-day reduced-vars
+Training script:
+  d-2GPU-1hr-refc_input-graphtransformer-base_1-finer_graph_v1-single_input-day20240505-pl925500-reduced_vars-202405.sh
+Config:
+  training/docs/user-guide/examples/anemoi-training-rrfs-lam-neural-lam-static-forcing-202405-1h-refc-input-graphtransformer-base_1-finer-graph-v1-single-input-day20240505-pl925500-reduced-vars.yaml
+Goal:
+  Isolate same-day behavior on an easier case and check whether base_1 normalization resolves the fixed ocean artifact.
+Differences from base:
+  - training restricted to 2024-05-05 only
+  - reduced variable layout: pl925500 reduced-vars
+  - smaller model width: num_channels=512
+  - still refc input/output
+  - still base_1 normalization
+
+4. base_1 one-month reduced-vars
+Training script:
+  d-2GPU-1hr-refc_input-graphtransformer-base_1-finer_graph_v1-single_input-1month202405-pl925500-reduced_vars.sh
+Config:
+  training/docs/user-guide/examples/anemoi-training-rrfs-lam-neural-lam-static-forcing-202405-1h-refc-input-graphtransformer-base_1-finer-graph-v1-single-input-1month202405-pl925500-reduced-vars.yaml
+Goal:
+  Separate time-window effects from variable-layout effects by keeping the reduced pl925500 layout but training over the broader May 2024 period.
+Differences from base:
+  - reduced variable layout: pl925500 reduced-vars
+  - smaller model width: num_channels=512
+  - base_1 normalization
+  - same broad May 2024 window idea as base
+
+5. base_2
+Training script:
+  d-2GPU-1hr-refc_value-base_2-refc_input-no_hydrometeors-finer_graph_v1-single_input-202405.sh
+Config:
+  training/docs/user-guide/examples/anemoi-training-rrfs-lam-neural-lam-static-forcing-202405-1h-refc-value-base_2-refc-input-no-hydrometeors-finer-graph-v1-single-input.yaml
+Goal:
+  Test the model-capacity hypothesis for the one-month refc-input / no-hydrometeors setup.
+Differences from base:
+  - inherits base_1 normalization
+  - model.num_channels increased from 1024 to 2048
+
+6. diffusion base_1 no-refc-input
+Training script:
+  d-2GPU-1hr-refc_value-no_refc_input-diffusion-base_1-finer_graph_v1-202405.sh
+Config:
+  training/docs/user-guide/examples/anemoi-training-rrfs-lam-neural-lam-static-forcing-202405-1h-refc-value-loss-no-refc-input-diffusion-base_1-finer-graph-v1.yaml
+Goal:
+  Test whether diffusion helps compared with deterministic regression when refc is not part of the input state.
+Differences from base:
+  - diffusion model/task instead of GraphTransformer forecast model
+  - refc is output-only, not input
+  - base_1 normalization
+  - hydrometeor-dropping aligned later in this branch
+
+7. diffusion base_1 refc-input no-hydrometeors
+Training script:
+  d-2GPU-1hr-refc_value-base_1-refc_input-no_hydrometeors-diffusion-finer_graph_v1-202405.sh
+Config:
+  training/docs/user-guide/examples/anemoi-training-rrfs-lam-neural-lam-static-forcing-202405-1h-refc-value-base_1-refc-input-no-hydrometeors-diffusion-finer-graph-v1.yaml
+Goal:
+  Test diffusion with the same refc-input / no-hydrometeors idea as the deterministic base_1 setup.
+Differences from base:
+  - diffusion model/task instead of deterministic GraphTransformer
+  - base_1 normalization
+  - hydrometeors removed
+
+Interpretation Notes
+
+- The key dimensions being tested are:
+  - normalization: base vs base_1
+  - time window: one-day vs one-month
+  - variable layout: reduced-vars vs no-hydrometeors full-ish layout
+  - architecture/task: GraphTransformer vs diffusion
+  - capacity: base_1 (1024) vs base_2 (2048)
+
+- The main diagnostic question behind the recent additions is:
+  whether the one-month failures come mainly from
+  1) broader training window,
+  2) larger variable/output layout,
+  3) insufficient model capacity,
+  or 4) a genuinely poor checkpoint/training trajectory.

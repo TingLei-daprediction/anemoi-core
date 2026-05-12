@@ -4,10 +4,11 @@ defaults:
 
 # One-day, single-input, finer-graph GraphTransformer experiment with the same
 # reduced variable set and "base" refc loss weighting as the existing day20240505
-# base run, but using Eagle-style forcing/static normalization:
+# base run, but using base_1 forcing/static normalization:
 #   - landcover: none
 #   - orography: max
 #   - swdown: none
+#   - refc: mean-std
 
 data:
   datasets:
@@ -17,8 +18,6 @@ data:
           config:
             default: "mean-std"
             std: []
-            min-max:
-              - refc
             max:
               - orography
             none:
@@ -28,3 +27,10 @@ data:
 system:
   output:
     root: /scratch3/NCEPDEV/fv3-cam/Ting.Lei/tlei-anemoi-training/base_1_graphtransformer_finer_graph_v1_single_input_day20240505_refc_input_pl925500_reduced_vars/
+
+training:
+  scalers:
+    datasets:
+      data:
+        refc_range_weight_factors:
+          normalization: mean-std

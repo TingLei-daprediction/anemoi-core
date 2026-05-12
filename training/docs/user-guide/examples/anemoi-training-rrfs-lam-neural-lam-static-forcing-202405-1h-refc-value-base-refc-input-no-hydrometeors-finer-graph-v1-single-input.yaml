@@ -6,6 +6,10 @@ defaults:
 #   - keep the direct +1h refc-value loss setup
 #   - move refc into the normal prognostic/input state
 #   - remove all hydrometeor variables from both input and output
+#   - forcing/static normalization:
+#       landcover -> none
+#       orography -> none (pass-through, no normalization)
+#       swdown    -> mean-std (default)
 
 system:
   output:
@@ -15,6 +19,16 @@ data:
   datasets:
     data:
       diagnostic: []
+      processors:
+        normalizer:
+          config:
+            default: "mean-std"
+            std: []
+            min-max:
+              - refc
+            none:
+              - landcover
+              - orography
 
 training:
   training_loss:

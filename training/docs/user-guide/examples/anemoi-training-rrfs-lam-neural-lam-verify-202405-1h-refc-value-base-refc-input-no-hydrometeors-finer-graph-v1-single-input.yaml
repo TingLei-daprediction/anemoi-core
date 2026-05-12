@@ -11,6 +11,9 @@ config_validation: True
 #   - refc is part of the prognostic/input state
 #   - multistep_input = 1
 #   - hydrometeors removed entirely
+#   - landcover: none (pass-through)
+#   - orography: none (pass-through, no normalization)
+#   - swdown: mean-std (default)
 #   - results stored under the same experiment root
 
 data:
@@ -24,11 +27,9 @@ data:
             std: []
             min-max:
               - refc
-            max:
-              - orography
             none:
               - landcover
-              - swdown
+              - orography
 
 system:
   output:

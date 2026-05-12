@@ -14,6 +14,7 @@ config_validation: True
 #   - landcover: none
 #   - orography: max
 #   - swdown: none
+#   - refc: mean-std
 #   - results stored under the same experiment root
 
 data:
@@ -24,8 +25,6 @@ data:
           config:
             default: "mean-std"
             std: []
-            min-max:
-              - refc
             max:
               - orography
             none:
@@ -35,3 +34,10 @@ data:
 system:
   output:
     root: /scratch3/NCEPDEV/fv3-cam/Ting.Lei/tlei-anemoi-training/base_1_graphtransformer_finer_graph_v1_single_input_refc_input_no_hydrometeors/verify/
+
+training:
+  scalers:
+    datasets:
+      data:
+        refc_range_weight_factors:
+          normalization: mean-std

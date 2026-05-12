@@ -694,7 +694,8 @@ class LongRolloutPlots(BasePlotCallback):
         """Store the data for each frame of the video."""
         # prepare predicted output tensors for video
         output_tensor = self.post_processors(y_pred.detach().cpu())[self.sample_idx : self.sample_idx + 1]
-        data_over_time.append(output_tensor[0, 0, :, np.array(list(plot_parameters_dict.keys()))])
+        pred_indices = np.array(list(plot_parameters_dict.keys()))
+        data_over_time.append(output_tensor[0, 0, :, pred_indices])
         # update min and max values for each variable for the colorbar
         vmin[:] = np.minimum(vmin, np.nanmin(data_over_time[-1], axis=0))
         vmax[:] = np.maximum(vmax, np.nanmax(data_over_time[-1], axis=0))
@@ -715,7 +716,8 @@ class LongRolloutPlots(BasePlotCallback):
         animation_interval: int = 400,
     ) -> None:
         """Generate the video animation for the rollout."""
-        for idx, (variable_idx, (variable_name, _)) in enumerate(plot_parameters_dict.items()):
+        for idx, (_, metadata) in enumerate(plot_parameters_dict.items()):
+            variable_name = metadata[0]
             # Create the animation and list to store the frames (artists)
             frames = []
             # Prepare the figure

@@ -154,6 +154,15 @@ class BasePlotCallback(Callback, ABC):
             if p in name_to_index and p in data_name_to_index
         }
 
+    @staticmethod
+    def _relative_output_name_to_index(output_full: torch.Tensor, name_to_index: dict[str, int]) -> dict[str, int]:
+        absolute_to_name = {idx: name for name, idx in name_to_index.items()}
+        return {
+            absolute_to_name[int(abs_idx)]: rel_idx
+            for rel_idx, abs_idx in enumerate(output_full.tolist())
+            if int(abs_idx) in absolute_to_name
+        }
+
     def _get_init_step(self, rollout_step: int, mode: tuple) -> int:
         """Return index of initial step for plotting."""
         return rollout_step if mode == "time_interp" else 0
@@ -1371,13 +1380,17 @@ class PlotSample(BasePlotAdditionalMetrics):
             )
 
             for chunk_idx, param_chunk in enumerate(self._chunk_parameters(self.parameters)):
+                data_output_name_to_index = self._relative_output_name_to_index(
+                    pl_module.data_indices[dataset_name].data.output.full,
+                    pl_module.data_indices[dataset_name].data.output.name_to_index,
+                )
                 plot_parameters_dict = self._plot_parameters_dict(
                     pl_module.data_indices[dataset_name].model.output.name_to_index,
                     param_chunk,
                     diagnostics,
                     force_input_reference_fields=self.diagnostic_input_reference_fields,
                     label=dataset_name,
-                    data_name_to_index=pl_module.data_indices[dataset_name].data.output.name_to_index,
+                    data_name_to_index=data_output_name_to_index,
                 )
                 if not plot_parameters_dict:
                     continue

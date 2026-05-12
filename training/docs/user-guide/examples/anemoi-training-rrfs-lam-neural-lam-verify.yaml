@@ -155,11 +155,6 @@ diagnostics:
     frequency: ${data.frequency}
 
 training:
-  scalers:
-    datasets:
-      data:
-        stdev_tendency: null
-        var_tendency: null
   num_sanity_val_steps: 0
   multistep_input: 2
   rollout:

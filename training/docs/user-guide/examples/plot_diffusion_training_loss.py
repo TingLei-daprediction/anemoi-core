@@ -5,8 +5,10 @@ This is intended for the current diffusion training logs, which commonly expose
 `train_multi_dataset_loss_step=...` in the progress-bar output rather than only
 epoch-level metrics.
 
-The script can also plot any matching validation/train metrics found in the
-same log.
+The script handles two quirks in those logs:
+- progress-bar redraws can repeat the exact same `*_step` values
+- `*_epoch` metrics are often reprinted on many later lines within the same
+  epoch, which otherwise produces a badly overplotted figure
 """
 
 from __future__ import annotations
@@ -35,8 +37,10 @@ def parse_log(path: str) -> dict[str, list[tuple[int, float]]]:
     Returns a dict keyed by metric name, where each value is a list of
     `(sample_index, value)` pairs in log order.
     """
-    by_metric: dict[str, list[tuple[int, float]]] = defaultdict(list)
+    step_metrics: dict[str, list[tuple[int, float]]] = defaultdict(list)
+    epoch_metrics: dict[str, dict[int, float]] = defaultdict(dict)
     counters: dict[str, int] = defaultdict(int)
+    last_step_value: dict[str, float] = {}
 
     with open(path, "r", encoding="utf-8", errors="ignore") as f:
         for raw in f:
@@ -50,10 +54,25 @@ def parse_log(path: str) -> dict[str, list[tuple[int, float]]]:
             for m_loss in STEP_LOSS_RE.finditer(line):
                 key = m_loss.group("key")
                 val = float(m_loss.group("val"))
-                x = epoch if key.endswith("_epoch") and epoch is not None else counters[key]
-                by_metric[key].append((x, val))
-                counters[key] += 1
 
+                if key.endswith("_epoch"):
+                    if epoch is not None:
+                        # Keep the latest value seen for a given epoch.
+                        epoch_metrics[key][epoch] = val
+                    continue
+
+                # Suppress exact progress-bar redraw duplicates for step metrics.
+                if key in last_step_value and last_step_value[key] == val:
+                    continue
+                step_metrics[key].append((counters[key], val))
+                counters[key] += 1
+                last_step_value[key] = val
+
+    by_metric: dict[str, list[tuple[int, float]]] = {}
+    for key, series in step_metrics.items():
+        by_metric[key] = series
+    for key, by_epoch in epoch_metrics.items():
+        by_metric[key] = sorted(by_epoch.items())
     return by_metric
 
 
@@ -61,6 +80,7 @@ def choose_default_keys(all_keys: list[str]) -> list[str]:
     preferred = [
         "train_multi_dataset_loss_step",
         "train_multi_dataset_loss_epoch",
+        "val_multi_dataset_loss_step",
         "val_multi_dataset_loss_epoch",
         "val_mse_epoch",
         "train_mse_loss_epoch",
@@ -93,23 +113,47 @@ def main() -> None:
     else:
         keys = choose_default_keys(all_keys)
 
-    plt.figure(figsize=(8.5, 5.0))
-    for key in keys:
-        series = metrics[key]
-        if not series:
-            continue
-        xs = [x for x, _ in series]
-        ys = [y for _, y in series]
-        marker = "o" if key.endswith("_epoch") else None
-        plt.plot(xs, ys, linewidth=1.2, marker=marker, label=key)
+    step_keys = [k for k in keys if k.endswith("_step")]
+    epoch_keys = [k for k in keys if k.endswith("_epoch")]
+    nrows = int(bool(step_keys)) + int(bool(epoch_keys))
+    fig, axes = plt.subplots(nrows=nrows, ncols=1, figsize=(9.0, 4.5 * nrows))
+    if nrows == 1:
+        axes = [axes]
 
-    plt.xlabel("Step index" if any(k.endswith("_step") for k in keys) else "Epoch")
-    plt.ylabel("Loss")
-    plt.title(args.title)
-    plt.grid(True, alpha=0.3)
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(args.output_png, dpi=150)
+    ax_idx = 0
+    if step_keys:
+        ax = axes[ax_idx]
+        ax_idx += 1
+        for key in step_keys:
+            series = metrics[key]
+            if not series:
+                continue
+            xs = [x for x, _ in series]
+            ys = [y for _, y in series]
+            ax.plot(xs, ys, linewidth=1.0, label=key)
+        ax.set_xlabel("Step index")
+        ax.set_ylabel("Loss")
+        ax.set_title(f"{args.title} - Step Metrics")
+        ax.grid(True, alpha=0.3)
+        ax.legend()
+
+    if epoch_keys:
+        ax = axes[ax_idx]
+        for key in epoch_keys:
+            series = metrics[key]
+            if not series:
+                continue
+            xs = [x for x, _ in series]
+            ys = [y for _, y in series]
+            ax.plot(xs, ys, linewidth=1.2, marker="o", label=key)
+        ax.set_xlabel("Epoch")
+        ax.set_ylabel("Loss")
+        ax.set_title(f"{args.title} - Epoch Metrics")
+        ax.grid(True, alpha=0.3)
+        ax.legend()
+
+    fig.tight_layout()
+    fig.savefig(args.output_png, dpi=150)
 
     print("Available keys:", ", ".join(all_keys))
     print("Plotted keys:", ", ".join(keys))

@@ -40,7 +40,6 @@ data:
               - icmr_925
               - snmr_850
               - snmr_925
-              - refc
 
 model:
   output_mask:

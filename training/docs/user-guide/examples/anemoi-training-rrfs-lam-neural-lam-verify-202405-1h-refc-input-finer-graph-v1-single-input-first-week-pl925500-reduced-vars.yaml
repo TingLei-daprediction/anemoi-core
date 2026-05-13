@@ -23,8 +23,7 @@ data:
           config:
             default: "mean-std"
             std: []
-            min-max:
-              - refc
+            min-max: []
             max:
               - orography
             none:

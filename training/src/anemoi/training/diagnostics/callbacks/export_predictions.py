@@ -118,25 +118,30 @@ class ExportPredictions(pl.Callback):
         return post_processors
 
     def _select_variables(self, pl_module: pl.LightningModule) -> tuple[list[str], list[int], list[int]]:
-        """Return (names, data_output_indices, model_output_indices).
+        """Return (names, data_tensor_indices, model_output_indices).
 
-        data_output_indices index into the data.output space (used for input/target tensors
-        extracted via data_indices.data.output.full).
-        model_output_indices index into the model.output space (used for prediction tensors).
-        These are *different* index spaces and must not be mixed.
+        data_tensor_indices index into tensors already sliced by data.output.full, so they
+        must be relative positions within that compacted list, not absolute data.output ids.
+        model_output_indices index into the raw model.output space used by prediction tensors.
         """
         data_indices = self._get_dataset_indices(pl_module)
         model_name_to_index = data_indices.model.output.name_to_index
-        data_name_to_index = data_indices.data.output.name_to_index
+        data_output_full = list(data_indices.data.output.full)
+        data_name_to_abs_index = data_indices.data.output.name_to_index
+        data_name_to_tensor_index = {
+            name: data_output_full.index(abs_idx)
+            for name, abs_idx in data_name_to_abs_index.items()
+            if abs_idx in data_output_full
+        }
         if self.parameters:
             # Keep only variables present in both spaces
             names = [
                 n for n in self.parameters
-                if n in model_name_to_index and n in data_name_to_index
+                if n in model_name_to_index and n in data_name_to_tensor_index
             ]
         else:
-            names = [n for n in model_name_to_index if n in data_name_to_index]
-        data_indices_list = [data_name_to_index[n] for n in names]
+            names = [n for n in model_name_to_index if n in data_name_to_tensor_index]
+        data_indices_list = [data_name_to_tensor_index[n] for n in names]
         model_indices_list = [model_name_to_index[n] for n in names]
         return names, data_indices_list, model_indices_list
 

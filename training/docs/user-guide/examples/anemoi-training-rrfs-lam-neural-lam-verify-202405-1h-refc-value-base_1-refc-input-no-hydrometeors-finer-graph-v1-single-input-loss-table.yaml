@@ -1,0 +1,24 @@
+defaults:
+  - anemoi-training-rrfs-lam-neural-lam-verify-202405-1h-refc-value-base_1-refc-input-no-hydrometeors-finer-graph-v1-single-input
+  - _self_
+
+config_validation: True
+
+# Verification variant that exports the exact configured validation loss over
+# every validation batch/sample/lead/variable for the base_1 refc-input
+# no-hydrometeors finer_graph_v1 single-input 1-hour setup.
+#
+# Matches checkpoints trained with:
+#   anemoi-training-rrfs-lam-neural-lam-static-forcing-202405-1h-refc-value-base_1-refc-input-no-hydrometeors-finer-graph-v1-single-input
+#
+# Loss weights used here exactly match base_1 training:
+#   general_variable.weights.refc: 20
+#   range_weight_factors: [1, 2, 2, 4]
+#   thresholds: [0.0, 20.0, 40.0] dBZ
+
+diagnostics:
+  callbacks:
+    - _target_: anemoi.training.diagnostics.callbacks.loss_table.ExportValidationLossTable
+      output_dir: /scratch3/NCEPDEV/fv3-cam/Ting.Lei/tlei-anemoi-training/base_1_graphtransformer_finer_graph_v1_single_input_refc_input_no_hydrometeors/verify/loss_tables
+      every_n_batches: 1
+      write_sample_variable_rows: true

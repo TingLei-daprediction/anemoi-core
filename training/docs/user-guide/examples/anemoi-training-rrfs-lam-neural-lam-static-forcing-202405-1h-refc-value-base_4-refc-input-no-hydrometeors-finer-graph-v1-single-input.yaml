@@ -3,9 +3,11 @@ defaults:
   - _self_
 
 # Base_4 single-input finer-graph GraphTransformer experiment:
-#   - same as base_3 (refc weight=5, refc-input, no-hydrometeors, base_1 normalization)
+#   - same as base_3 (refc weight=5, TargetTendencyRangeScaler, refc-input,
+#     no-hydrometeors, base_1 normalization)
 #   - reduce processor depth from 16 layers to 8 layers
 #   - reduce num_chunks from 4 to 2 to keep chunk size consistent (8 layers / 2 chunks = 4 layers per chunk)
+#   - TargetTendencyRangeScaler inherited from base_3 (no override needed)
 
 system:
   output:

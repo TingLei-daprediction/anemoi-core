@@ -6,6 +6,17 @@ defaults:
 #   - same as base_1 (refc-input / no-hydrometeors / base_1 normalization)
 #   - reduce refc general_variable weight from 20 to 5 to reduce gradient
 #     budget imbalance between refc and other variables
+#   - switch refc_range_weight_factors from TargetValueRangeScaler to
+#     TargetTendencyRangeScaler so that the per-node multiplicative weight is
+#     based on |target - input| instead of the target value.
+#     Rationale: TargetValueRangeScaler assigns the highest weight to bins
+#     where target is large (storm arrivals) and the lowest weight where
+#     target is small (storm departures), creating a 4:1 gradient asymmetry
+#     that drives the model to amplify existing storms rather than capturing
+#     actual storm movement.  TargetTendencyRangeScaler instead weights by
+#     the magnitude of change, treating arrivals and departures symmetrically.
+#     Thresholds [5, 20, 40] dBZ on tendency magnitude ensure stable nodes
+#     (tendency ≈ 0) fall in the lowest-weight bin.
 
 system:
   output:
@@ -18,3 +29,6 @@ training:
         general_variable:
           weights:
             refc: 5
+        refc_range_weight_factors:
+          _target_: anemoi.training.losses.scalers.TargetTendencyRangeScaler
+          thresholds: [5.0, 20.0, 40.0]

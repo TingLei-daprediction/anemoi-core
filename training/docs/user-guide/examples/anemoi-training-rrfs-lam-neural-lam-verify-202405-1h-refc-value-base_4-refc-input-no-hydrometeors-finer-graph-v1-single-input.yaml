@@ -1,0 +1,15 @@
+defaults:
+  - anemoi-training-rrfs-lam-neural-lam-verify-202405-1h-refc-value-base_3-refc-input-no-hydrometeors-finer-graph-v1-single-input
+  - _self_
+
+config_validation: True
+
+# Verification variant for checkpoints trained with:
+#   anemoi-training-rrfs-lam-neural-lam-static-forcing-202405-1h-refc-value-base_4-refc-input-no-hydrometeors-finer-graph-v1-single-input
+#
+# Same as base_3 verify but output goes to the base_4 experiment root.
+# model.processor overrides not needed here (loaded from checkpoint).
+
+system:
+  output:
+    root: /scratch3/NCEPDEV/fv3-cam/Ting.Lei/tlei-anemoi-training/base_4_graphtransformer_finer_graph_v1_single_input_refc_input_no_hydrometeors/verify/

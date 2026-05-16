@@ -1,0 +1,20 @@
+defaults:
+  - anemoi-training-rrfs-lam-neural-lam-static-forcing-202405-1h-refc-value-base_1-refc-input-no-hydrometeors-finer-graph-v1-single-input
+  - _self_
+
+# Base_3 single-input finer-graph GraphTransformer experiment:
+#   - same as base_1 (refc-input / no-hydrometeors / base_1 normalization)
+#   - reduce refc general_variable weight from 20 to 5 to reduce gradient
+#     budget imbalance between refc and other variables
+
+system:
+  output:
+    root: /scratch3/NCEPDEV/fv3-cam/Ting.Lei/tlei-anemoi-training/base_3_graphtransformer_finer_graph_v1_single_input_refc_input_no_hydrometeors/
+
+training:
+  scalers:
+    datasets:
+      data:
+        general_variable:
+          weights:
+            refc: 5

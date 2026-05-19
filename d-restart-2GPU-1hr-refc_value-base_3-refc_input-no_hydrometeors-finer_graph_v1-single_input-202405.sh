@@ -41,6 +41,7 @@ RUN_ID=REPLACE_WITH_RUN_ID
 MAX_EPOCHS=600
 
 CKPT=/scratch3/NCEPDEV/fv3-cam/Ting.Lei/tlei-anemoi-training/base_3_graphtransformer_finer_graph_v1_single_input_refc_input_no_hydrometeors/checkpoint/${RUN_ID}/last.ckpt
+RUN_ID="51951d18-0807-4125-819e-4d81741c716a"
 echo "Resuming run_id=${RUN_ID}"
 echo "Checkpoint=${CKPT}"
 echo "Target max_epochs=${MAX_EPOCHS}"

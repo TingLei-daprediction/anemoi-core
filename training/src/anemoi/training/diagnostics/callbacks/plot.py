@@ -264,8 +264,16 @@ class BasePlotCallback(Callback, ABC):
 
     def apply_output_mask(self, pl_module: pl.LightningModule, data: torch.Tensor) -> torch.Tensor:
         if hasattr(pl_module, "output_mask") and pl_module.output_mask is not None:
-            # Fill with NaNs values where the mask is False
-            data[:, :, :, ~pl_module.output_mask, :] = np.nan
+            output_mask = pl_module.output_mask
+            if isinstance(output_mask, dict) or isinstance(output_mask, torch.nn.ModuleDict):
+                if len(output_mask) != 1:
+                    msg = "apply_output_mask requires a dataset-specific mask when multiple datasets are present."
+                    raise ValueError(msg)
+                output_mask = next(iter(output_mask.values()))
+            if hasattr(output_mask, "apply"):
+                return output_mask.apply(data, dim=-2, fill_value=np.nan)
+            # Backward-compatibility fallback for plain boolean masks.
+            data[:, :, :, ~output_mask, :] = np.nan
         return data
 
     @abstractmethod

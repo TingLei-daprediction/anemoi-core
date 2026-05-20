@@ -1,0 +1,21 @@
+defaults:
+  - anemoi-training-rrfs-lam-neural-lam-static-forcing-202405-1h-refc-value-base_3-refc-input-no-hydrometeors-finer-graph-v1-single-input
+  - _self_
+
+# Base_3_v2 single-input finer-graph GraphTransformer experiment:
+#   - same as base_3
+#   - enable query/key normalization in encoder, processor, and decoder
+#     attention blocks to test whether attention-score scale drift contributes
+#     to the learned global channel offsets
+
+system:
+  output:
+    root: /scratch3/NCEPDEV/fv3-cam/Ting.Lei/tlei-anemoi-training/base_3_v2_graphtransformer_finer_graph_v1_single_input_refc_input_no_hydrometeors/
+
+model:
+  processor:
+    qk_norm: True
+  encoder:
+    qk_norm: True
+  decoder:
+    qk_norm: True

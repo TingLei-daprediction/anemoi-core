@@ -1,0 +1,16 @@
+defaults:
+  - anemoi-training-rrfs-lam-neural-lam-static-forcing-202405-1h-refc-value-base_3-refc-input-no-hydrometeors-finer-graph-v1-single-input
+  - _self_
+
+# Base_3_v1 single-input finer-graph GraphTransformer experiment:
+#   - same as base_3
+#   - zero-initialize the decoder data extractor so the learned branch starts
+#     from an exact persistence baseline instead of an arbitrary offset
+
+system:
+  output:
+    root: /scratch3/NCEPDEV/fv3-cam/Ting.Lei/tlei-anemoi-training/base_3_v1_graphtransformer_finer_graph_v1_single_input_refc_input_no_hydrometeors/
+
+model:
+  decoder:
+    initialise_data_extractor_zero: True

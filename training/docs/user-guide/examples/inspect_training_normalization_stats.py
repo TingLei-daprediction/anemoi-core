@@ -55,10 +55,16 @@ def _get_dataset_path(cfg, dataset_name: str) -> str:
     return cfg.system.input.dataset
 
 
+def _cfg_list(value) -> list:
+    if value is None:
+        return []
+    return OmegaConf.to_container(value, resolve=True) or []
+
+
 def _get_role(var: str, data_cfg) -> str:
-    forcing = set(OmegaConf.to_container(data_cfg.forcing, resolve=True) or [])
-    diagnostic = set(OmegaConf.to_container(data_cfg.diagnostic, resolve=True) or [])
-    target = set(OmegaConf.to_container(data_cfg.get("target"), resolve=True) or [])
+    forcing = set(_cfg_list(data_cfg.get("forcing")))
+    diagnostic = set(_cfg_list(data_cfg.get("diagnostic")))
+    target = set(_cfg_list(data_cfg.get("target")))
     if var in forcing:
         return "forcing"
     if var in diagnostic:

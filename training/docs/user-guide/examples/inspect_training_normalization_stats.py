@@ -36,10 +36,22 @@ def _compose_config(config_dir: Path, config_name: str):
     return cfg
 
 
+def _get_train_dataset_cfg(cfg, dataset_name: str):
+    training_cfg = cfg.dataloader.training
+    if training_cfg.get("datasets") is not None:
+        return training_cfg.datasets[dataset_name]
+    return training_cfg
+
+
 def _get_dataset_path(cfg, dataset_name: str) -> str:
-    dataset_cfg = cfg.dataloader.training.datasets[dataset_name].dataset_config
+    train_ds_cfg = _get_train_dataset_cfg(cfg, dataset_name)
+    dataset_cfg = train_ds_cfg.get("dataset_config")
     if dataset_cfg is not None and dataset_cfg.get("dataset") is not None:
         return dataset_cfg.dataset
+    if train_ds_cfg.get("dataset") is not None:
+        return train_ds_cfg.dataset
+    if cfg.dataloader.get("dataset") is not None:
+        return cfg.dataloader.dataset
     return cfg.system.input.dataset
 
 
@@ -83,12 +95,12 @@ def main() -> None:
     cfg = _compose_config(Path(args.config_path), args.config_name)
     dataset_name = args.dataset_name
     data_cfg = cfg.data.datasets[dataset_name]
-    train_ds_cfg = cfg.dataloader.training.datasets[dataset_name]
+    train_ds_cfg = _get_train_dataset_cfg(cfg, dataset_name)
 
     dataset_path = _get_dataset_path(cfg, dataset_name)
     start = train_ds_cfg.start
     end = train_ds_cfg.end
-    frequency = train_ds_cfg.frequency
+    frequency = train_ds_cfg.get("frequency") or cfg.data.frequency
     drop = OmegaConf.to_container(train_ds_cfg.drop, resolve=True) if train_ds_cfg.get("drop") is not None else None
 
     reader = NativeGridDataset(dataset=dataset_path, start=start, end=end, frequency=frequency, drop=drop)

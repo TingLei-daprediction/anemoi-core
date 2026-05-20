@@ -19,7 +19,7 @@ cd /scratch3/NCEPDEV/fv3-cam/Ting.Lei/dr-anemoi-core/anemoi-core
 
 # Set this to the exact checkpoint you want to verify, for example:
 # /scratch3/.../checkpoint/<run_id>/inference-last.ckpt
-CHECKPOINT_PATH="REPLACE_WITH_CHECKPOINT_PATH"
+CHECKPOINT_PATH="/scratch3/NCEPDEV/fv3-cam/Ting.Lei/tlei-anemoi-training/base_3_graphtransformer_finer_graph_v1_single_input_refc_input_no_hydrometeors/checkpoint/51951d18-0807-4125-819e-4d81741c716a/inference-anemoi-by_epoch-epoch_030-step_000713.ckpt"
 test -f "$CHECKPOINT_PATH"
 
 training/docs/user-guide/examples/run_rrfs_verify_export_3h_refc_value_base_3_refc_input_no_hydrometeors_finer_graph_v1_single_input_tagged_ckpt.sh \

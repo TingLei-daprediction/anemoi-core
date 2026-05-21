@@ -39,6 +39,7 @@ srun --gpu-bind=closest \
   anemoi-training train \
     --config-path /scratch3/NCEPDEV/fv3-cam/Ting.Lei/dr-anemoi-core/anemoi-core/training/docs/user-guide/examples \
     --config-name anemoi-training-rrfs-lam-neural-lam-static-forcing-202405-1h-refc-value-base_3_v3-refc-input-no-hydrometeors-finer-graph-v1-single-input \
+    'model.bounding=[]' \
     system.hardware.num_gpus_per_node=2 \
     system.hardware.num_nodes=1 \
     system.hardware.num_gpus_per_model=1

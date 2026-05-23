@@ -8,7 +8,7 @@
 #SBATCH --gpus-per-task=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=0
-#SBATCH -t 8:00:00
+#SBATCH -t 1-00:00:00
 #SBATCH -o anemoi-gpu-day20240505-1hrleadtime-1hr_refc_value-base_3_v1-refc_input-no_hydrometeors-finer_graph_v1-single_input-verify.%j.out
 #SBATCH -e anemoi-gpu-day20240505-1hrleadtime-1hr_refc_value-base_3_v1-refc_input-no_hydrometeors-finer_graph_v1-single_input-verify.%j.err
 
@@ -17,8 +17,8 @@ set -euo pipefail
 source /scratch3/NCEPDEV/fv3-cam/Ting.Lei/dr-miniconda3/bin/activate anemoi-training-env-python3.12
 cd /scratch3/NCEPDEV/fv3-cam/Ting.Lei/dr-anemoi-core/anemoi-core
 
-run_id="REPLACE_WITH_RUN_ID"
+run_id="6a2d7c51-9d1e-4a41-9e5a-ea8d7412d36e"
 # Use the full training-window sample range rather than only 2024-05-05.
 training/docs/user-guide/examples/run_rrfs_verify_export_1h_refc_value_base_3_v1_refc_input_no_hydrometeors_finer_graph_v1_single_input_day20240505.sh \
-  /scratch3/NCEPDEV/fv3-cam/Ting.Lei/tlei-anemoi-training/base_3_v1_graphtransformer_finer_graph_v1_single_input_refc_input_no_hydrometeors/checkpoint/${run_id}/inference-last.ckpt \
+  /scratch3/NCEPDEV/fv3-cam/Ting.Lei/tlei-anemoi-training/base_3_v1_graphtransformer_finer_graph_v1_single_input_refc_input_no_hydrometeors/checkpoint/${run_id}/last.ckpt \
   2024-05-02T09:00:00 2024-05-31T20:00:00 1h

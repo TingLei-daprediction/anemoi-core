@@ -67,6 +67,8 @@ class BaseDiffusionForecaster(BaseGraphModule):
         """Get input tensor shape for diffusion model."""
         x = {}
         for dataset_name, dataset_batch in batch.items():
+            if dataset_name not in self.data_indices:
+                continue  # skip metadata keys (e.g. __sample_time_ns__)
             msg = (
                 f"Batch length not sufficient for requested n_step_input length for {dataset_name}!"
                 f", {dataset_batch.shape[1]} !>= {self.n_step_input + self.n_step_output}"
@@ -85,6 +87,8 @@ class BaseDiffusionForecaster(BaseGraphModule):
         """Get target tensor shape for diffusion model."""
         y = {}
         for dataset_name, dataset_batch in batch.items():
+            if dataset_name not in self.data_indices:
+                continue  # skip metadata keys (e.g. __sample_time_ns__)
             start = self.n_step_input
             y_time = dataset_batch.narrow(1, start, self.n_step_output)
             var_idx = self.data_indices[dataset_name].data.output.full.to(device=dataset_batch.device)

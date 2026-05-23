@@ -160,6 +160,8 @@ class GraphInterpolator(BaseGraphModule):
             y_pred = self(x_bound, target_forcing)
             y = {}
             for dataset_name, dataset_batch in batch.items():
+                if dataset_name not in self.data_indices:
+                    continue  # skip metadata keys (e.g. __sample_time_ns__)
                 y[dataset_name] = dataset_batch[
                     :,
                     self.imap[interp_step],
@@ -252,6 +254,8 @@ class GraphMultiOutInterpolator(BaseGraphModule):
         x_bound = {}
         y = {}
         for dataset_name, dataset_batch in batch.items():
+            if dataset_name not in self.data_indices:
+                continue  # skip metadata keys (e.g. __sample_time_ns__)
             x_bound[dataset_name] = dataset_batch[:, itemgetter(*self.boundary_times)(self.imap)][
                 ...,
                 self.data_indices[dataset_name].data.input.full,

@@ -86,6 +86,8 @@ class GraphAutoEncoder(BaseGraphModule):
         x = {}
 
         for dataset_name, dataset_batch in batch.items():
+            if dataset_name not in self.data_indices:
+                continue  # skip metadata keys (e.g. __sample_time_ns__)
             msg = (
                 f"Batch length not sufficient for requested n_step_input/n_step_output for {dataset_name}!"
                 f" {dataset_batch.shape[1]} !>= {required_time_steps}"
@@ -103,6 +105,8 @@ class GraphAutoEncoder(BaseGraphModule):
         y = {}
 
         for dataset_name, dataset_batch in batch.items():
+            if dataset_name not in self.data_indices:
+                continue  # skip metadata keys (e.g. __sample_time_ns__)
             y_time = dataset_batch.narrow(1, 0, self.n_step_output)
             var_idx = self.data_indices[dataset_name].data.output.full.to(device=dataset_batch.device)
             y[dataset_name] = y_time.index_select(-1, var_idx)

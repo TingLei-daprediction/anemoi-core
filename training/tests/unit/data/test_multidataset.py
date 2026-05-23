@@ -8,11 +8,57 @@
 # nor does it submit to any jurisdiction.
 
 
+import math
+
 import numpy as np
 import pytest
+import torch
+import torch.utils.data
 from pytest_mock import MockFixture
 
 from anemoi.training.data.multidataset import MultiDataset
+
+
+# ---------------------------------------------------------------------------
+# Module-level helper for the DataLoader regression test.
+# Must be at module level so it is picklable by DataLoader's worker processes.
+# ---------------------------------------------------------------------------
+
+
+class _StampedIterableDataset(torch.utils.data.IterableDataset):
+    """Minimal picklable dataset that mimics MultiDataset's output contract.
+
+    Each sample yields a dict with a ``data`` payload whose value is the sample
+    index (so we can verify which sample we got) and a ``__sample_time_ns__``
+    key that is the nanosecond timestamp of the corresponding date.  The two
+    values are correlated: ``data[0] == i`` ↔ ``timestamp == dates[i]``.
+    This lets the test assert that timestamps remain attached to their samples
+    rather than being reconstructed from batch position.
+    """
+
+    def __init__(self, dates: np.ndarray) -> None:
+        super().__init__()
+        # Store as plain list so we stay picklable without numpy sharing concerns.
+        self._dates_ns: list[int] = [int(d.astype(np.int64)) for d in dates]
+        self._n = len(dates)
+
+    def __iter__(self):
+        worker_info = torch.utils.data.get_worker_info()
+        if worker_info is None:
+            start, end = 0, self._n
+        else:
+            per_worker = math.ceil(self._n / worker_info.num_workers)
+            start = worker_info.id * per_worker
+            end = min(start + per_worker, self._n)
+
+        for idx in range(start, end):
+            yield {
+                # data encodes the sample index so the test can identify each sample.
+                "data": torch.tensor([float(idx)]),
+                # Real timestamp embedded in the sample – NOT derived from iteration order.
+                "__sample_time_ns__": torch.tensor([self._dates_ns[idx]], dtype=torch.int64),
+            }
+
 
 
 class TestMultiDataset:
@@ -116,3 +162,124 @@ class TestMultiDataset:
         # Accessing valid_date_indices should raise ValueError
         with pytest.raises(ValueError, match="No valid date indices found after intersection across all datasets"):
             _ = multi_dataset.valid_date_indices
+
+    def test_get_sample_includes_real_timestamps(self, mocker: MockFixture) -> None:
+        """get_sample must embed real timestamps so export callbacks never reconstruct from batch_idx.
+
+        With num_workers > 1, DataLoader worker interleaving makes batch_idx-based time
+        reconstruction wrong. The fix is to propagate '__sample_time_ns__' through the batch.
+        This test verifies the key is present, is a torch.Tensor of int64, and matches the
+        primary dataset's dates — regardless of how many workers are used.
+        """
+        import torch
+
+        base_dates = np.array(
+            ["2024-01-01", "2024-01-02", "2024-01-03", "2024-01-04", "2024-01-05"],
+            dtype="datetime64[D]",
+        ).astype("datetime64[ns]")
+
+        mock_dataset_a = mocker.MagicMock()
+        mock_dataset_a.missing = set()
+        mock_dataset_a.dates = base_dates
+        mock_dataset_a.has_trajectories = False
+        mock_dataset_a.frequency = "1D"
+        mock_dataset_a.get_sample.return_value = torch.zeros(5, 1, 4)
+
+        mock_grid_indices = mocker.MagicMock()
+        mock_grid_indices.get_shard_indices.return_value = slice(None)
+
+        mocker.patch(
+            "anemoi.training.data.multidataset.create_dataset",
+            return_value=mock_dataset_a,
+        )
+
+        ds = MultiDataset(
+            data_readers={"data": None},
+            grid_indices={"data": mock_grid_indices},
+            relative_date_indices=[0, 1, 2],
+            timestep="1D",
+            shuffle=False,
+        )
+
+        sample = ds.get_sample(0)
+
+        assert "__sample_time_ns__" in sample, (
+            "get_sample must include '__sample_time_ns__' so export callbacks "
+            "never need to reconstruct timestamps from batch_idx."
+        )
+        ts = sample["__sample_time_ns__"]
+        assert isinstance(ts, torch.Tensor), "__sample_time_ns__ must be a torch.Tensor"
+        assert ts.dtype == torch.int64, "__sample_time_ns__ must be int64 (nanoseconds since epoch)"
+
+        expected_ns = base_dates[:3].astype(np.int64)
+        np.testing.assert_array_equal(
+            ts.numpy(),
+            expected_ns,
+            err_msg="Timestamps must match primary dataset dates, not be synthesised from batch_idx.",
+        )
+
+
+# ---------------------------------------------------------------------------
+# End-to-end DataLoader regression test for num_workers > 1.
+# ---------------------------------------------------------------------------
+
+
+def test_dataloader_preserves_sample_timestamps_with_multiple_workers() -> None:
+    """Verify ``__sample_time_ns__`` survives DataLoader collation with num_workers=2.
+
+    Regression test for the bug where ``ExportPredictions`` reconstructed timestamps
+    from ``batch_idx * batch_size + sample_idx``.  With ``num_workers > 1`` the
+    DataLoader interleaves batches from different workers, so that formula produces
+    wrong dates.  The fix embeds real timestamps in each sample via
+    ``MultiDataset.get_sample``; this test verifies that:
+
+    1. The ``__sample_time_ns__`` key is present in every collated batch.
+    2. The timestamps correspond to the *actual* sample dates, not to the batch
+       position (which would differ under worker interleaving).
+    3. All samples are accounted for, with no duplicates.
+    """
+    n_samples = 20
+    batch_size = 2
+    n_workers = 2
+
+    # Build a date range so we have a concrete expected value for every index.
+    dates = np.array(
+        [f"2024-01-{d+1:02d}" for d in range(n_samples)],
+        dtype="datetime64[D]",
+    ).astype("datetime64[ns]")
+
+    ds = _StampedIterableDataset(dates)
+    dl = torch.utils.data.DataLoader(ds, batch_size=batch_size, num_workers=n_workers)
+
+    seen_indices: list[int] = []
+    for batch in dl:
+        # Key must survive collation regardless of which worker produced the batch.
+        assert "__sample_time_ns__" in batch, (
+            "DataLoader collation must preserve '__sample_time_ns__' from every sample dict. "
+            "If this key is missing, export/plot callbacks cannot derive correct timestamps "
+            "with num_workers > 1."
+        )
+
+        ts = batch["__sample_time_ns__"]  # shape: (batch_size, 1)
+        data = batch["data"]  # shape: (batch_size, 1), value == sample index
+
+        assert ts.dtype == torch.int64, "__sample_time_ns__ must remain int64 after collation"
+
+        for i in range(data.shape[0]):
+            sample_idx = int(data[i, 0].item())
+            expected_ns = int(dates[sample_idx].astype(np.int64))
+            actual_ns = ts[i, 0].item()
+
+            assert actual_ns == expected_ns, (
+                f"Sample {sample_idx}: timestamp {actual_ns} != expected {expected_ns}. "
+                "Timestamps must be attached to their samples, not reconstructed from "
+                "the iteration order (which is wrong under DataLoader worker interleaving)."
+            )
+            seen_indices.append(sample_idx)
+
+    # All samples must be delivered exactly once.
+    assert sorted(seen_indices) == list(range(n_samples)), (
+        "DataLoader must yield every sample exactly once. "
+        f"Expected {list(range(n_samples))}, got {sorted(seen_indices)}."
+    )
+

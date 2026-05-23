@@ -393,7 +393,13 @@ class PlotLoss(_PlotLoss):
         batch: dict[str, torch.Tensor],
         batch_idx: int,
     ) -> None:
-        batch_without_ensemble_dim = {dataset: data[:, :, 0, :, :] for dataset, data in batch.items()}
+        # Squeeze out the ensemble dimension for scalar metrics; skip metadata keys
+        # (e.g. __sample_time_ns__) which are not ensemble tensors.
+        batch_without_ensemble_dim = {
+            dataset: data[:, :, 0, :, :]
+            for dataset, data in batch.items()
+            if dataset in pl_module.data_indices
+        }
         super().on_validation_batch_end(
             trainer,
             pl_module,

@@ -377,6 +377,13 @@ class MultiDataset(IterableDataset):
             grid_shard_indices = self.grid_indices[name].get_shard_indices(self.reader_group_rank)
             x[name] = dataset.get_sample(time_indices, grid_shard_indices)
 
+        # Propagate real sample timestamps so export/plot callbacks use actual times.
+        # Reconstructing time from batch_idx is incorrect with num_workers > 1 because
+        # DataLoader worker interleaving breaks the assumption that batch_idx == sample order.
+        primary_dataset = self.datasets[self.dataset_names[0]]
+        sample_dates = np.asarray(primary_dataset.dates[time_indices]).astype("datetime64[ns]").astype(np.int64)
+        x["__sample_time_ns__"] = torch.from_numpy(sample_dates)
+
         return x
 
     def __iter__(self) -> dict[str, torch.Tensor]:

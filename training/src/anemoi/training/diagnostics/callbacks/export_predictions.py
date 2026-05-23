@@ -17,7 +17,6 @@ import torch
 import xarray as xr
 
 from anemoi.training.train.tasks import GraphInterpolator
-from anemoi.utils.dates import frequency_to_timedelta
 
 LOGGER = logging.getLogger(__name__)
 
@@ -36,8 +35,6 @@ class ExportPredictions(pl.Callback):
         self.sample_idx = cfg.sample_idx
         self.parameters = cfg.parameters
         self.output_dir = Path(cfg.output_dir) if cfg.output_dir else Path(config.system.output.plots) / "exports"
-        self.start = cfg.start
-        self.frequency = cfg.frequency
 
     def _get_output_times(self, pl_module: pl.LightningModule) -> tuple[int, str]:
         if isinstance(pl_module, GraphInterpolator):
@@ -45,22 +42,6 @@ class ExportPredictions(pl.Callback):
         else:
             output_times = (getattr(pl_module, "rollout", 0), "forecast")
         return output_times
-
-    def _build_time_coord(
-        self,
-        length: int,
-        batch_idx: int = 0,
-        batch_size: int = 1,
-        sample_idx: int = 0,
-    ) -> np.ndarray:
-        if self.start and self.frequency:
-            start = np.datetime64(self.start)
-            step = frequency_to_timedelta(self.frequency)
-            step_s = int(step.total_seconds())
-            sample_offset = batch_idx * batch_size + sample_idx
-            times = start + (sample_offset + np.arange(length, dtype="int64")) * np.timedelta64(step_s, "s")
-            return times
-        return np.arange(length, dtype="int64")
 
     def _extract_time_coord_from_batch(
         self,
@@ -325,11 +306,12 @@ class ExportPredictions(pl.Callback):
 
         time_coord = self._extract_time_coord_from_batch(batch, data_len)
         if time_coord is None:
-            time_coord = self._build_time_coord(
-                data_len,
-                batch_idx=batch_idx,
-                batch_size=data_batch.shape[0],
-                sample_idx=self.sample_idx,
+            raise RuntimeError(
+                "ExportPredictions: batch is missing real sample timestamps "
+                "('__sample_time_ns__'/'sample_time_ns'/'time_ns'). "
+                "Ensure MultiDataset.get_sample propagates timestamps in the batch dict. "
+                "Reconstructing time from batch_idx is incorrect with num_workers > 1 "
+                "and has been removed."
             )
         input_time = time_coord[:n_step_input]
         target_time = time_coord[n_step_input : n_step_input + target_len]

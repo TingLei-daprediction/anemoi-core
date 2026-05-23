@@ -810,6 +810,8 @@ class BaseGraphModule(pl.LightningModule, ABC):
         """
         assert isinstance(batch, dict), "batch must be a dict keyed by dataset name"
         for dataset_name in batch:
+            if dataset_name not in self.model.pre_processors:
+                continue  # skip metadata keys (e.g. __sample_time_ns__)
             batch[dataset_name] = self.model.pre_processors[dataset_name](batch[dataset_name])  # normalized in-place
         return batch
 

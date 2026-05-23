@@ -355,12 +355,17 @@ class BasePerBatchPlotCallback(BasePlotCallback):
     ) -> None:
         if batch_idx % self.every_n_batches == 0:
 
-            # gather tensors if necessary
+            # gather tensors if necessary; metadata keys (e.g. __sample_time_ns__) are
+            # kept as-is since they are not spatial tensors and need no gathering.
             batch = {
-                dataset_name: pl_module.allgather_batch(
-                    dataset_tensor,
-                    pl_module.grid_indices[dataset_name],
-                    pl_module.grid_dim,
+                dataset_name: (
+                    pl_module.allgather_batch(
+                        dataset_tensor,
+                        pl_module.grid_indices[dataset_name],
+                        pl_module.grid_dim,
+                    )
+                    if dataset_name in pl_module.data_indices
+                    else dataset_tensor
                 )
                 for dataset_name, dataset_tensor in batch.items()
             }
@@ -1634,18 +1639,9 @@ class PlotSample(BasePlotAdditionalMetrics):
         if sample_times is not None and target_offset < sample_times.shape[0]:
             dt = np.datetime_as_string(sample_times[target_offset], unit="s")
             return f"time: {dt}"
-
-        try:
-            start = self.config.dataloader.validation.datasets[dataset_name].start
-            freq = self.config.data.frequency
-            if start and freq:
-                step = frequency_to_timedelta(freq)
-                step_s = int(step.total_seconds())
-                dt64 = np.datetime64(start) + np.timedelta64((batch_idx + target_offset) * step_s, "s")
-                dt = np.datetime_as_string(dt64, unit="s")
-                return f"time: {dt}"
-        except Exception:
-            return None
+        # Real timestamps are not available; return None so the caller falls back to
+        # a batch-index label. The old batch_idx-based time reconstruction has been
+        # removed because it produces wrong results with num_workers > 1.
         return None
 
     def _target_time_token(self, time_label: str | None, batch_idx: int) -> str:

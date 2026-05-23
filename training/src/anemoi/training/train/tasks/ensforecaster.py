@@ -199,6 +199,8 @@ class GraphEnsForecaster(BaseRolloutGraphModule):
         # start rollout of preprocessed batch
         x = {}
         for dataset_name, dataset_batch in batch.items():
+            if dataset_name not in self.data_indices:
+                continue  # skip metadata keys (e.g. __sample_time_ns__)
             x[dataset_name] = dataset_batch[
                 :,
                 0 : self.n_step_input,
@@ -234,6 +236,8 @@ class GraphEnsForecaster(BaseRolloutGraphModule):
             y_pred = self(x, fcstep=rollout_step)
             y = {}
             for dataset_name, dataset_batch in batch.items():
+                if dataset_name not in self.data_indices:
+                    continue  # skip metadata keys (e.g. __sample_time_ns__)
                 start = self.n_step_input + rollout_step * self.n_step_output
                 y_time = dataset_batch.narrow(1, start, self.n_step_output)[:, :, 0, :, :]
                 var_idx = self.data_indices[dataset_name].data.output.full.to(device=dataset_batch.device)

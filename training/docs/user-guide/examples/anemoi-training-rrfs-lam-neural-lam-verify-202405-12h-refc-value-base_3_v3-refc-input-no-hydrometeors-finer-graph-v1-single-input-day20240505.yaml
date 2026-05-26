@@ -1,0 +1,32 @@
+defaults:
+  - anemoi-training-rrfs-lam-neural-lam-verify-202405-3h-refc-value-base_3-refc-input-no-hydrometeors-finer-graph-v1-single-input
+  - _self_
+
+config_validation: True
+
+# Day-only 12-hour recursive verification for base_3_v3 checkpoints.
+# The export contains all leads from +1h through +12h; inspect lead indices
+# 5, 8, and 11 for +6h, +9h, and +12h respectively.
+
+system:
+  output:
+    root: /scratch3/NCEPDEV/fv3-cam/Ting.Lei/tlei-anemoi-training/base_3_v3_graphtransformer_finer_graph_v1_single_input_refc_input_no_hydrometeors/verify_12h_day20240505/
+
+dataloader:
+  validation_rollout: 12
+
+training:
+  rollout:
+    start: 12
+    epoch_increment: 0
+    max: 12
+
+model:
+  bounding: []
+  processor:
+    qk_norm: True
+  encoder:
+    qk_norm: True
+  decoder:
+    initialise_data_extractor_zero: True
+    qk_norm: True

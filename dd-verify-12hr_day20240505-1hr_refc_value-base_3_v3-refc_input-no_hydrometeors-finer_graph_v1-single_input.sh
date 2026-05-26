@@ -17,7 +17,18 @@ set -euo pipefail
 source /scratch3/NCEPDEV/fv3-cam/Ting.Lei/dr-miniconda3/bin/activate anemoi-training-env-python3.12
 cd /scratch3/NCEPDEV/fv3-cam/Ting.Lei/dr-anemoi-core/anemoi-core
 
-run_id="REPLACE_WITH_RUN_ID"
+checkpoint_root="/scratch3/NCEPDEV/fv3-cam/Ting.Lei/tlei-anemoi-training/base_3_v3_graphtransformer_finer_graph_v1_single_input_refc_input_no_hydrometeors/checkpoint"
+if [[ ! -d "$checkpoint_root" ]]; then
+  echo "ERROR: checkpoint directory not found: $checkpoint_root" >&2
+  exit 1
+fi
+checkpoint_path="$(find "$checkpoint_root" -mindepth 2 -maxdepth 2 -name last.ckpt -type f -printf '%T@ %p\n' | sort -nr | head -n 1 | cut -d' ' -f2-)"
+if [[ -z "$checkpoint_path" ]]; then
+  echo "ERROR: no last.ckpt found under $checkpoint_root" >&2
+  exit 1
+fi
+echo "Using checkpoint: $checkpoint_path"
+
 training/docs/user-guide/examples/run_rrfs_verify_export_12h_refc_value_base_3_v3_refc_input_no_hydrometeors_finer_graph_v1_single_input_day20240505.sh \
-  /scratch3/NCEPDEV/fv3-cam/Ting.Lei/tlei-anemoi-training/base_3_v3_graphtransformer_finer_graph_v1_single_input_refc_input_no_hydrometeors/checkpoint/${run_id}/last.ckpt \
+  "$checkpoint_path" \
   2024-05-05T00:00:00 2024-05-05T23:00:00 1h
